@@ -1,8 +1,9 @@
 # Setup boilerplate from JUCE example GUI App
 
 cmake_minimum_required(VERSION 3.22...4.2)
-
-project(GUI_APP_EXAMPLE VERSION 0.0.1)
+project(
+	GUI_APP_EXAMPLE
+	VERSION 0.0.1)
 
 set(BIN_DIR "${PROJECT_SOURCE_DIR}/build/bin/")
 
@@ -30,15 +31,17 @@ juce_add_gui_app(Encore
     NEEDS_CURL FALSE)                   # Set to TRUE if you need to use curl
 
 
-# `target_sources` adds source files to a target. We pass the target that needs the sources as the
-# first argument, then a visibility parameter for the sources which should normally be PRIVATE.
-# Finally, we supply a list of source files that will be built into the target. This is a standard
-# CMake command.
-
+# Assign files to compile for the build
+# (dependencies should automatically be collected and added)
 target_sources(Encore
     PRIVATE
-        app/Main.cpp
-        app/MainComponent.cpp)
+        src/Main.cpp
+        src/MainComponent.cpp)
+
+# Add src/ as an include directory, for more robust #includes
+target_include_directories(Encore
+	PRIVATE
+		${PROJECT_SOURCE_DIR}/src)
 
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
@@ -66,7 +69,7 @@ target_compile_definitions(Encore
 target_link_libraries(Encore
     PRIVATE
         # GuiAppData            # If we'd created a binary data target, we'd link to it here
-        juce::juce_gui_extra
+        juce::juce_gui_basics
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
