@@ -23,20 +23,20 @@
 
  BEGIN_JUCE_PIP_METADATA
 
- name:             ComponentParentsChildrenTutorial
- version:          1.0.0
- vendor:           JUCE
- website:          http://juce.com
- description:      Explores relationships between components.
+ name:			   ComponentParentsChildrenTutorial
+ version:		   1.0.0
+ vendor:		   JUCE
+ website:		   http://juce.com
+ description:	   Explores relationships between components.
 
- dependencies:     juce_core, juce_data_structures, juce_events, juce_graphics,
-                   juce_gui_basics
- exporters:        xcode_mac, vs2019, linux_make, xcode_iphone, androidstudio
+ dependencies:	   juce_core, juce_data_structures, juce_events, juce_graphics,
+				   juce_gui_basics
+ exporters: 	   xcode_mac, vs2019, linux_make, xcode_iphone, androidstudio
 
- type:             Component
- mainClass:        MainContentComponent
+ type:			   Component
+ mainClass: 	   MainContentComponent
 
- useLocalCopy:     1
+ useLocalCopy:	   1
 
  END_JUCE_PIP_METADATA
 
@@ -46,147 +46,163 @@
 #pragma once
 
 //==============================================================================
-class SunComponent   : public juce::Component
+class SunComponent	 : public juce::Component
 {
 public:
-    SunComponent() {}
+	SunComponent() {}
 
-    void paint (juce::Graphics&) override {}
+	void paint (juce::Graphics& g) override 
+	{
+		float diameter = juce::jmin(getWidth(), getHeight());
+		g.setColour (juce::Colours::yellow);
+		auto lineThickness = 3.0f;
+		g.drawEllipse (lineThickness * 0.5f,
+			lineThickness * 0.5f,
+			(float) diameter - lineThickness * 2,
+			(float) diameter - lineThickness * 2,
+			lineThickness);
+	}
 
 private:
-    //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SunComponent)
+	//==============================================================================
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SunComponent)
 };
 
 //==============================================================================
 class FloorComponent   : public juce::Component
 {
 public:
-    FloorComponent() {}
+	FloorComponent() {}
 
-    void paint (juce::Graphics& g) override
-    {
-        g.setColour (juce::Colours::green);
-        g.drawLine (0.0f, (float) getHeight() / 2.0f, (float) getWidth(), (float) getHeight() / 2.0f, 5.0f);
-    }
+	void paint (juce::Graphics& g) override
+	{
+		g.setColour (juce::Colours::green);
+		g.drawLine (0.0f, (float) getHeight() / 2.0f, (float) getWidth(), (float) getHeight() / 2.0f, 5.0f);
+	}
 
 private:
-    //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FloorComponent)
+	//==============================================================================
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FloorComponent)
 };
 
 //==============================================================================
 class WallComponent   : public juce::Component
 {
 public:
-    WallComponent() {}
+	WallComponent() {}
 
-    void paint (juce::Graphics& g) override
-    {
-        g.fillCheckerBoard (getLocalBounds().toFloat(), 30, 10,
-                            juce::Colours::sandybrown, juce::Colours::saddlebrown);
-    }
+	void paint (juce::Graphics& g) override
+	{
+		g.fillCheckerBoard (getLocalBounds().toFloat(), 30, 10,
+							juce::Colours::sandybrown, juce::Colours::saddlebrown);
+	}
 
 private:
-    //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (WallComponent)
+	//==============================================================================
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (WallComponent)
 };
 
 //==============================================================================
 class RoofComponent   : public juce::Component
 {
 public:
-    RoofComponent() {}
+	RoofComponent() {}
 
-    void paint (juce::Graphics& g) override
-    {
-        g.setColour (juce::Colours::red);
+	void paint (juce::Graphics& g) override
+	{
+		g.setColour (juce::Colours::red);
 
-        juce::Path roof;
-        roof.addTriangle (0.0f, (float) getHeight(), (float) getWidth(), (float) getHeight(), (float) getWidth() / 2.0f, 0.0f);
-        g.fillPath (roof);
-    }
+		juce::Path roof;
+		roof.addTriangle (0.0f, (float) getHeight(), (float) getWidth(), (float) getHeight(), (float) getWidth() / 2.0f, 0.0f);
+		g.fillPath (roof);
+	}
 
 private:
-    //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RoofComponent)
+	//==============================================================================
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RoofComponent)
 };
 
 //==============================================================================
 class HouseComponent   : public juce::Component
 {
 public:
-    HouseComponent()
-    {
-        addAndMakeVisible (wall);
-        addAndMakeVisible (roof);
-    }
+	HouseComponent()
+	{
+		addAndMakeVisible (wall);
+		addAndMakeVisible (roof);
+	}
 
-    void resized() override
-    {
-        auto separation = juce::jlimit (2, 10, getHeight() / 20);                                                               // [1]
+	void resized() override
+	{
+		auto separation = juce::jlimit (2, 10, getHeight() / 20);																// [1]
 
-        roof.setBounds (0, 0, getWidth(), (int) (getHeight() * 0.2) - separation / 2);                                          // [2]
-        wall.setBounds (0, (int) (getHeight() * 0.20) + separation / 2, getWidth(), (int) (getHeight() * 0.80) - separation);   // [3]
-    }
+		roof.setBounds (0, 0, getWidth(), (int) (getHeight() * 0.2) - separation / 2);											// [2]
+		wall.setBounds (0, (int) (getHeight() * 0.20) + separation / 2, getWidth(), (int) (getHeight() * 0.80) - separation);	// [3]
+	}
 
 private:
-    WallComponent wall;
-    RoofComponent roof;
+	WallComponent wall;
+	RoofComponent roof;
 
-    //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HouseComponent)
+	//==============================================================================
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HouseComponent)
 };
 
 //==============================================================================
-class SceneComponent    : public juce::Component
+class SceneComponent	: public juce::Component
 {
 public:
-    SceneComponent()
-    {
-        addAndMakeVisible (floor);
-        addAndMakeVisible (house);
-    }
+	SceneComponent()
+	{
+		addAndMakeVisible (floor);
+		addAndMakeVisible (house);
+		addAndMakeVisible (smallHouse);
+		addAndMakeVisible (sun);
+	}
 
-    void paint (juce::Graphics& g) override
-    {
-        g.fillAll (juce::Colours::lightblue);
-    }
+	void paint (juce::Graphics& g) override
+	{
+		g.fillAll (juce::Colours::lightblue);
+	}
 
-    void resized() override
-    {
-        floor.setBounds (10, 297, 580, 5);
-        house.setBounds (300, 70, 200, 220);
-    }
+	void resized() override
+	{
+		floor.setBounds (10, 297, 580, 5);
+		house.setBounds (300, 70, 200, 220);
+		smallHouse.setBounds (50, 240, 50, 50);
+		sun.setBounds (530, 10, 60, 80);
+	}
 
 private:
-    FloorComponent floor;
-    HouseComponent house;
+	FloorComponent floor;
+	HouseComponent house;
+	HouseComponent smallHouse;
+	SunComponent sun;
 
-    //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SceneComponent)
+	//==============================================================================
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SceneComponent)
 };
 
 //==============================================================================
-class MainContentComponent   : public juce::Component
+class MainContentComponent	 : public juce::Component
 {
 public:
-    MainContentComponent()
-    {
-        addAndMakeVisible (scene);
-        setSize (600, 400);
-    }
+	MainContentComponent()
+	{
+		addAndMakeVisible (scene);
+		setSize (600, 400);
+	}
 
-    void paint (juce::Graphics&) override {}
+	void paint (juce::Graphics&) override {}
 
-    void resized() override
-    {
-        scene.setBounds (0, 0, getWidth(), getHeight());
-    }
+	void resized() override
+	{
+		scene.setBounds (0, 0, getWidth(), getHeight());
+	}
 
 private:
-    SceneComponent scene;
+	SceneComponent scene;
 
-    //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainContentComponent)
+	//==============================================================================
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainContentComponent)
 };
