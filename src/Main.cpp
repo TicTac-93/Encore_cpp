@@ -2,6 +2,7 @@
 #define CLAY_IMPLEMENTATION
 #include <clay.h>
 #include <raylib/clay_renderer_raylib.c>
+#include <GLFW/glfw3.h>
 
 // Clay element presets
 const int FONT_ID_BODY_16 = 0;
@@ -38,8 +39,6 @@ struct DocumentArray {
 	uint32_t length;
 };
 
-uint32_t selectedDocumentIndex = 0;
-
 DocumentArray documents = {
 	.documents = new Document[] {
 		{CLAY_STRING("Squirrels"), CLAY_STRING("They key is to have every key, the key to open every door. The key to success is to keep your head above the water, never give up. I'm up to something. Every chance I get, I water the plants, Lion! The key to more success is to have a lot of pillows. Life is what you make it, so let's make it. Always remember in the jungle there's a lot of they in there, after you overcome they, you will make it to paradise. It's on you how you want to live your life. Everyone has a choice. I pick my choice, squeaky clean.\n\nFind peace, life is like a water fall, you've gotta flow. Wraith talk. They don't want us to win. The first of the month is coming, we have to get money, we have no choice. It cost money to eat and they don't want you to eat. It's on you how you want to live your life. Everyone has a choice. I pick my choice, squeaky clean. The key to more success is to have a lot of pillows. In life you have to take the trash out, if you have trash in your life, take it out, throw it away, get rid of it, major key. Let's see what Chef Dee got that they don't want us to eat.\n\nEgg whites, turkey sausage, wheat toast, water. Of course they don't want us to eat our breakfast, so we are going to enjoy our breakfast. Don't ever play yourself. The key to more success is to get a massage once a week, very important, major key, cloth talk. Cloth talk. How's business? Boomin. You see that bamboo behind me though, you see that bamboo? Ain't nothin' like bamboo. Bless up.")},
@@ -57,6 +56,7 @@ void HandleClayErrors(Clay_ErrorData errorData) {
 }
 
 int main(void) {
+	
 	// DEBUG
 	// Clay_SetDebugModeEnabled(true);
 
@@ -76,12 +76,20 @@ int main(void) {
 		.errorHandlerFunction = HandleClayErrors
 	};
 	Clay_Initialize(clayMemory, screenDimensions, clayErrorHandler);
+	
+	// =========================================================================
+	// Runtime Variables
+	uint32_t selectedDocumentIndex = 0;
 
-
+	// =========================================================================
+	// UI Assets
+	// Fonts need to be loaded after RayLib is initialized
 	Font fonts[1];
-	fonts[FONT_ID_BODY_16] = LoadFontEx("resources/Montserrat-Regular.ttf", 16, NULL, 0);
+	fonts[FONT_ID_BODY_16] = LoadFontEx("resources/Montserrat-Regular.ttf", 32, NULL, 0);
 	Clay_SetMeasureTextFunction(Raylib_MeasureText, fonts);
+	SetFontFiltering(fonts, TEXTURE_FILTER_BILINEAR);
 
+	// =========================================================================
 	// Main loop
 	while (!WindowShouldClose()) {	// Raylib, detects close button or ESC key
 		// Runs once per frame
@@ -123,15 +131,10 @@ int main(void) {
 				CLAY_ID("Header_Bar"),
 				{
 					.layout = {
-						.sizing = {
-							.width = CLAY_SIZING_GROW(0),
-							.height = CLAY_SIZING_FIXED(60)
-						},
+						.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(60) },
 						.padding = CLAY_PADDING_ALL(16),
 						.childGap = 16,
-						.childAlignment = {
-							.y = CLAY_ALIGN_Y_CENTER
-						}
+						.childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
 					},
 					.backgroundColor = GREY,
 					.cornerRadius = ROUNDING,

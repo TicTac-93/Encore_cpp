@@ -79,6 +79,18 @@ void DisableColorOverlay() {
     }
 }
 
+void SetFontFiltering(Font* fonts, TextureFilter filter) {
+
+	// Best to configure this, or text will render pretty rough.
+	printf("FONTS SIZE: %i", (sizeof(fonts) / sizeof(&fonts[0])));
+	for (int i = 0; i < sizeof(fonts) / sizeof(&fonts[0]); i++)
+	{
+		printf("FONT INDEX %i", i);
+		// GenTextureMipmaps(&fonts[i].texture);
+		SetTextureFilter(fonts[i].texture, filter);
+	}
+}
+
 // Get a ray trace from the screen position (i.e mouse) within a specific section of the screen
 Ray GetScreenToWorldPointWithZDistance(Vector2 position, Camera camera, int screenWidth, int screenHeight, float zDistance)
 {
@@ -196,6 +208,7 @@ void Clay_Raylib_Close()
 
 void Clay_Raylib_Render(Clay_RenderCommandArray renderCommands, Font* fonts)
 {
+
     for (int j = 0; j < renderCommands.length; j++)
     {
         Clay_RenderCommand *renderCommand = Clay_RenderCommandArray_Get(&renderCommands, j);
