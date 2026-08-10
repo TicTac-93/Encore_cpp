@@ -20,7 +20,7 @@ add_subdirectory(modules/JUCE)              # If you've put JUCE in a subdirecto
 # up by default. This function accepts many optional arguments. Check the readme at
 # `docs/CMake API.md` in the JUCE repo for the full list.
 
-juce_add_gui_app(tutorial_juce_interface
+juce_add_gui_app(tutorial_juce_flexbox
     # VERSION ...                       # Set this if the app version is different to the project version
     # ICON_BIG ...                      # ICON_* arguments specify a path to an image file to use as an icon
     # ICON_SMALL ...
@@ -33,12 +33,12 @@ juce_add_gui_app(tutorial_juce_interface
 
 # Assign files to compile for the build
 # (dependencies should automatically be collected and added)
-target_sources(tutorial_juce_interface
+target_sources(tutorial_juce_flexbox
     PRIVATE
         src/Main.cpp)
 
 # Add src/ as an include directory, for more robust #includes
-target_include_directories(tutorial_juce_interface
+target_include_directories(tutorial_juce_flexbox
 	PRIVATE
 		${PROJECT_SOURCE_DIR}/src)
 
@@ -50,13 +50,13 @@ target_include_directories(tutorial_juce_interface
 # definitions will be visible both to your code, and also the JUCE module code, so for new
 # definitions, pick unique names that are unlikely to collide! This is a standard CMake command.
 
-target_compile_definitions(tutorial_juce_interface
+target_compile_definitions(tutorial_juce_flexbox
     PRIVATE
         # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
         JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_gui_app` call
         JUCE_USE_CURL=0     # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_gui_app` call
-        JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:tutorial_juce_interface,JUCE_PRODUCT_NAME>"
-        JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:tutorial_juce_interface,JUCE_VERSION>")
+        JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:tutorial_juce_flexbox,JUCE_PRODUCT_NAME>"
+        JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:tutorial_juce_flexbox,JUCE_VERSION>")
 
 
 # `target_link_libraries` links libraries and JUCE modules to other libraries or executables. Here,
@@ -65,7 +65,7 @@ target_compile_definitions(tutorial_juce_interface
 # linked automatically. If we'd generated a binary data target above, we would need to link to it
 # here too. This is a standard CMake command.
 
-target_link_libraries(tutorial_juce_interface
+target_link_libraries(tutorial_juce_flexbox
     PRIVATE
         # GuiAppData            # If we'd created a binary data target, we'd link to it here
         juce::juce_gui_basics
@@ -76,6 +76,6 @@ target_link_libraries(tutorial_juce_interface
 
 		
 # Move built application to bin directory
-add_custom_command(TARGET tutorial_juce_interface 
+add_custom_command(TARGET tutorial_juce_flexbox 
                    POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tutorial_juce_interface> ${BIN_DIR}/tutorial_juce_interface.exe)
+                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tutorial_juce_flexbox> ${BIN_DIR}/tutorial_juce_flexbox.exe)
