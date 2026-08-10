@@ -6,7 +6,7 @@
   ==============================================================================
 */
 
-#include <JuceHeader.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include "ListenersAndBroadcastersTutorial_01.h"
 
 class Application    : public juce::JUCEApplication

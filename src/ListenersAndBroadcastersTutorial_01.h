@@ -54,6 +54,7 @@ public:
     {
         addAndMakeVisible (checkTheTimeButton);
         checkTheTimeButton.setButtonText ("Check the time...");
+		checkTheTimeButton.onClick = [this] { checkTime(); };
 
         addAndMakeVisible (timeLabel);
         timeLabel.setColour (juce::Label::backgroundColourId, juce::Colours::black);
@@ -69,9 +70,30 @@ public:
         timeLabel         .setBounds (10, 60, getWidth() - 20, 40);
     }
 
+	void checkTime()
+	{
+		auto currentTime = juce::Time::getCurrentTime();
+		// bool includeDate = true;
+		// bool includeTime = true;
+		// auto currentTimeString = currentTime.toString(includeDate, includeTime);
+
+		std::string message = "Time since last click: ";
+		std::string minutes, seconds;
+
+		int delta = (int) (currentTime - lastClick).inSeconds();
+		lastClick = currentTime;
+		minutes = std::to_string(delta / 60);
+		seconds = std::to_string(delta % 60);
+		if (minutes.length() == 1) minutes = std::string("0").append(minutes);
+		if (seconds.length() == 1) seconds = std::string("0").append(seconds);
+
+		timeLabel.setText(juce::String(message.append(minutes).append(":").append(seconds)), juce::dontSendNotification);
+	}
+
 private:
     juce::TextButton checkTheTimeButton;
     juce::Label timeLabel;
+	juce::Time lastClick = juce::Time::getCurrentTime();
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainContentComponent)
