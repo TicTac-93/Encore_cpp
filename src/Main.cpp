@@ -6,8 +6,8 @@
   ==============================================================================
 */
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "FlexBoxGridTutorial_01.h"
+#include <JuceHeader.h>
+#include "ListenersAndBroadcastersTutorial_01.h"
 
 class Application    : public juce::JUCEApplication
 {
@@ -15,12 +15,12 @@ public:
     //==============================================================================
     Application() = default;
 
-    const juce::String getApplicationName() override       { return "FlexBoxGridTutorial"; }
+    const juce::String getApplicationName() override       { return "ListenersAndBroadcastersTutorial"; }
     const juce::String getApplicationVersion() override    { return "1.0.0"; }
 
     void initialise (const juce::String&) override
     {
-        mainWindow.reset (new MainWindow ("FlexBoxGridTutorial", std::make_unique<MainContentComponent>(), *this));
+        mainWindow.reset (new MainWindow ("ListenersAndBroadcastersTutorial", std::make_unique<MainContentComponent>(), *this));
     }
 
     void shutdown() override                         { mainWindow = nullptr; }
