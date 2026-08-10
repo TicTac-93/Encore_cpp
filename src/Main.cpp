@@ -6,8 +6,8 @@
   ==============================================================================
 */
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "RectangleAdvancedTutorial.h"
+#include <JuceHeader.h>
+#include "FlexBoxGridTutorial_01.h"
 
 class Application    : public juce::JUCEApplication
 {
@@ -15,12 +15,12 @@ public:
     //==============================================================================
     Application() = default;
 
-    const juce::String getApplicationName() override       { return "RectangleAdvancedTutorial"; }
+    const juce::String getApplicationName() override       { return "FlexBoxGridTutorial"; }
     const juce::String getApplicationVersion() override    { return "1.0.0"; }
 
     void initialise (const juce::String&) override
     {
-        mainWindow.reset (new MainWindow ("RectangleAdvancedTutorial", std::make_unique<MainContentComponent>(), *this));
+        mainWindow.reset (new MainWindow ("FlexBoxGridTutorial", std::make_unique<MainContentComponent>(), *this));
     }
 
     void shutdown() override                         { mainWindow = nullptr; }
