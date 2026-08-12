@@ -26,22 +26,26 @@ juce_add_gui_app(Encore
     # ICON_SMALL ...
     # DOCUMENT_EXTENSIONS ...           # Specify file extensions that should be associated with this app
     # COMPANY_NAME ...                  # Specify the name of the app's author
-    PRODUCT_NAME "Gui App Example"      # The name of the final executable, which can differ from the target name
+    PRODUCT_NAME "Encore"               # The name of the final executable, which can differ from the target name
     NEEDS_WEB_BROWSER FALSE             # Set to TRUE if you need to use webviews
     NEEDS_CURL FALSE)                   # Set to TRUE if you need to use curl
 
+# Encore UI files
+list(APPEND ENCORE_UI
+	# "src/ui/MainComponent.cpp"
+)
+
+# Encore include directories
+target_include_directories(Encore
+	PRIVATE
+		src
+		src/ui)
 
 # Assign files to compile for the build
-# (dependencies should automatically be collected and added)
 target_sources(Encore
     PRIVATE
         src/Main.cpp
-        src/MainComponent.cpp)
-
-# Add src/ as an include directory, for more robust #includes
-target_include_directories(Encore
-	PRIVATE
-		${PROJECT_SOURCE_DIR}/src)
+		"${ENCORE_UI}")
 
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
