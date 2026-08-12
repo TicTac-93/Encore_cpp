@@ -7,9 +7,16 @@ project(
 
 set(BIN_DIR "${PROJECT_SOURCE_DIR}/bin/")
 
-
+# NOTE: wxWidgets requires to be added with recursive submodules
 add_subdirectory(modules/wxWidgets)
 
+add_executable(Encore
+	src/Main.cpp)
+
+# Link wxWidgets
+target_link_libraries(Encore
+	wx::core
+	wx::base)
 		
 # Move built application to bin directory
 add_custom_command(TARGET Encore 
