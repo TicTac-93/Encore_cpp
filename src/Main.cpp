@@ -1,5 +1,6 @@
 #include <wx/wx.h>
 
+
 class MyFrame : public wxFrame {
 	public:
 		MyFrame() : wxFrame(nullptr, wxID_ANY,  "Hello World") {
@@ -23,8 +24,8 @@ class MyFrame : public wxFrame {
 			SetStatusText("Welcome to wxWidgets!");
 
 			Bind(wxEVT_MENU, &MyFrame::OnHello, this, ID_HELLO);
-			Bind(wxEVT_MENU, &OnAbout, this, wxID_ABOUT);
-			Bind(wxEVT_MENU, &OnExit, this, wxID_EXIT);
+			Bind(wxEVT_MENU, &MyFrame::OnAbout, this, wxID_ABOUT);
+			Bind(wxEVT_MENU, &MyFrame::OnExit, this, wxID_EXIT);
 		}
 
 	private:
