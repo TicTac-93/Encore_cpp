@@ -10,22 +10,6 @@ message(STATUS "Build Type ${CMAKE_BUILD_TYPE}")
 # =============================================================================
 # Packages
 
-# wxWidgets Dynamic Linking
-
-# NOTE: Update this path to reflect your local installation of wxWidgets
-# LIST(APPEND CMAKE_PREFIX_PATH "C:/dev/packages/installed/wxWidgets")
-
-# find_package(wxWidgets CONFIG REQUIRED
-# 	COMPONENTS
-# 		core base)
-
-# if(wxWidgets_USE_FILE) # not defined in CONFIG mode
-#     include(${wxWidgets_USE_FILE})
-# endif()
-
-
-# wxWidgets Static Linking
-
 if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
 	message(STATUS "Optimizing for Release - Configuring wxWidgets")
 	set(CMAKE_BUILD_TYPE "Release")
@@ -38,21 +22,31 @@ set(wxBUILD_SHARED OFF)
 add_subdirectory(modules/wxWidgets-3.2 EXCLUDE_FROM_ALL)
 
 
-# =============================================================================
-# Project Variables
-# set(BIN_DIR "${PROJECT_SOURCE_DIR}/bin/")
-
 
 # =============================================================================
 # Encore
-add_executable(Encore
-	src/Main.cpp)
 
-# # Link wxWidgets
+# Files
+LIST(APPEND ENCORE_FILES
+	src/Main.cpp
+	src/Panels.cpp
+	src/Menus.cpp)
+
+LIST(APPEND ENCORE_RESOURCES
+	resources/exit.png)
+
+add_executable(Encore
+	${ENCORE_FILES})
+
+set_target_properties(Encore PROPERTIES
+	RESOURCE "${ENCORE_RESOURCES}")
+
+# Link wxWidgets
 target_link_libraries(Encore
 	wx::core
 	wx::base)
 
+# Optimizations for Release builds
 if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
 	message(STATUS "Optimizing for Release - Setting compile options...")
 
@@ -75,10 +69,7 @@ else()
 	message(STATUS "Debug Mode - Skipping Optimization")
 endif()
 
-install(
-	TARGETS
-		Encore)
+install(TARGETS Encore
+	RESOURCE DESTINATION
+	${CMAKE_INSTALL_PREFIX}/bin/resources)
 
-# install(
-# 	FILES
-# 		$<TARGET_RUNTIME_DLLS:Encore> TYPE BIN)
