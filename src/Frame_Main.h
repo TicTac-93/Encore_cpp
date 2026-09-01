@@ -24,12 +24,14 @@ class EncoreFrame : public wxFrame {
 
 			p_frameAnalysis = new FrameAnalysisPanel(nb_main);
 			nb_main->AddPage(p_frameAnalysis, "Review Frames");
+			// Adds dummy frames for UI testing
+			p_frameAnalysis->SetFrameCount(101);
+			for (int i = 0; i < p_frameAnalysis->GetFrameCount(); i++) {
+				auto *widget = p_frameAnalysis->AddFrame(i);
+				widget->SetFrameNum(i);
+			}
 
 			// Layout
-			// auto *layout = new wxBoxSizer(wxVERTICAL);
-			// layout->Add(p_dirSelect, 1, wxEXPAND);
-
-			// nb_main->SetSizer(layout);
 			SetMenuBar(menu); // Breaks initial layout if added before the sizer
 
 			// Connections
