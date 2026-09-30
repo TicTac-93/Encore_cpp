@@ -1,7 +1,10 @@
 #include <wx/wx.h>
-#include <wx/dir.h>
+#include <format>
 #include "FileListCtrl.h"
 #include "../EncoreEnums.h"
+#include "../backend/Encore_SequenceImport.h"
+
+using namespace encore;
 
 class DirSelectPanel : public wxPanel {
 	public:
@@ -17,9 +20,10 @@ class DirSelectPanel : public wxPanel {
 			btn_browse_dir = new wxButton(this, ID_BTN_DIR, "Browse...");
 
 			lbl_filelist = new wxStaticText(this, -1, "Select Frame Sequences to Analyze:");
-			filesArray = new wxArrayString();
-			lc_filelist = new FileListCtrl(this, -1, *filesArray);
+			lc_filelist = new FileListCtrl(this, -1, *fileListArray);
 			HideFilelist();
+
+			status_bar = new wxStatusBar(this);
 
 			// Layout
 			auto *layout = new wxBoxSizer(wxVERTICAL);
@@ -36,6 +40,8 @@ class DirSelectPanel : public wxPanel {
 			layout->Add(lbl_filelist, 0, wxEXPAND);
 			layout->AddSpacer(PAD_SML);
 			layout->Add(lc_filelist, 0, wxEXPAND);
+			layout->AddStretchSpacer();
+			layout->Add(status_bar, 0, wxEXPAND);
 
 			layout_outer->Add(layout, 1, wxEXPAND | wxALL, PAD_MED);
 			SetSizer(layout_outer);
@@ -51,7 +57,9 @@ class DirSelectPanel : public wxPanel {
 		wxButton *btn_browse_dir;
 		wxStaticText *lbl_filelist;
 		FileListCtrl *lc_filelist;
-		wxArrayString *filesArray;
+		wxArrayString *fileListArray = new wxArrayString();
+		std::vector<FrameGroup *> *frameGroup = new std::vector<FrameGroup *>();
+		wxStatusBar *status_bar;
 		wxColor *itemColorA = new wxColor("#ffffff");
 		wxColor *itemColorB = new wxColor("#bbbbbb");
 
@@ -76,21 +84,23 @@ class DirSelectPanel : public wxPanel {
 			if (browseDialog->ShowModal() == wxID_OK) {
 				wxString path_selected = browseDialog->GetPath();
 				field_dir->SetValue(path_selected);
-				GetFilesInDir(path_selected);
+				auto filesArray = wxArrayString();
+				if (GetFilesInDir(path_selected, &filesArray) == 0) {
+					if (filesArray.GetCount() == 0) {
+						*fileListArray = filesArray;
+						HideFilelist();
+					} else {
+						*frameGroup = GroupFrameSequences(&filesArray);
+						fileListArray->Clear();
+						for (int i = 0; i < frameGroup->size(); i++) {
+							auto group = frameGroup->at(i);
+							fileListArray->Add(std::format("{}[{}-{}]{}", group->GetFilename(), group->GetMin(), group->GetMax(), group->GetFiletype()));
+						}
+						ShowFilelist();
+					}
+
+				}
 			}
 		}
 
-		void GetFilesInDir(wxString path) {
-			wxDir dir = wxDir();
-			// Confirm the given path is valid
-			if (dir.Open(path)) {
-				dir.GetAllFiles(path, filesArray, wxEmptyString, wxDIR_FILES);
-			}
-
-			if (filesArray->GetCount() == 0) {
-				HideFilelist();
-			} else {
-				ShowFilelist();
-			}
-		}
 };

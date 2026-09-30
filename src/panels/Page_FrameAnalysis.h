@@ -133,7 +133,7 @@ class FrameAnalysisPanel : public wxPanel {
 			frameCount = count;
 			lbl_frameCount->SetLabel(std::to_string(count));
 
-			frameWidgets.reserve(count);
+			frameWidgets->reserve(count);
 		}
 
 		int GetFrameCount() {
@@ -143,7 +143,7 @@ class FrameAnalysisPanel : public wxPanel {
 		FrameWidget* AddFrame(int index) {
 			auto *bmp_dummy = new wxBitmap();
 			auto *newFrame = new FrameWidget(p_frameList, -1, bmp_dummy, bmp_dummy, bmp_dummy);
-			frameWidgets.push_back(newFrame);
+			frameWidgets->push_back(newFrame);
 			vb_frameList->Add(newFrame, 0, wxEXPAND);
 
 			return newFrame;
@@ -159,6 +159,5 @@ class FrameAnalysisPanel : public wxPanel {
 		wxBoxSizer *vb_frameList;
 		
 		int frameCount = 0;
-		std::vector<FrameWidget*> frameWidgets;
-		
+		std::vector<FrameWidget*> *frameWidgets = new std::vector<FrameWidget*>;	
 };

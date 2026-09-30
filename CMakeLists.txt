@@ -33,7 +33,8 @@ add_subdirectory(modules/wxWidgets-3.2 EXCLUDE_FROM_ALL)
 
 # Files
 set(ENCORE_FILES
-	src/Main.cpp)
+	src/Main.cpp
+	src/backend/Encore_SequenceImport.cpp)
 
 if(WIN32)
     # Include a RC file for windows
@@ -41,6 +42,8 @@ if(WIN32)
 endif()
 
 add_executable(${PROJECT_NAME} WIN32 ${ENCORE_FILES})
+
+set_property(TARGET Encore PROPERTY CXX_STANDARD 20)
 
 # Link wxWidgets
 target_link_libraries(${PROJECT_NAME}
