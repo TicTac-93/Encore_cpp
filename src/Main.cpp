@@ -1,5 +1,5 @@
 #include <wx/wx.h>
-#include "Frame_Main.h"
+#include "ui/Frame_Main.h"
 
 class MyApp : public wxApp {
 	public:

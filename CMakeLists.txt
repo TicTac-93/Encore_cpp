@@ -7,6 +7,8 @@ project(
 message(STATUS "Using ${CMAKE_GENERATOR}")
 message(STATUS "Build Type ${CMAKE_BUILD_TYPE}")
 
+include(FetchContent)
+
 # NOTE:
 # This CMakeLists was predominantly configured for MinGW64, for building on Windows.
 # It has also been tested with MSVC, but may have some issues.
@@ -14,6 +16,18 @@ message(STATUS "Build Type ${CMAKE_BUILD_TYPE}")
 
 # =============================================================================
 # Packages
+
+FetchContent_Declare(
+	OpenEXR
+	GIT_REPOSITORY https://github.com/AcademySoftwareFoundation/openexr.git
+	GIT_TAG        69b2604fc76e370615438bdc8d2cd95b9349c12e # release 3.5.2
+)
+
+FetchContent_Declare(
+	wxWidgets
+	GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
+	GIT_TAG        aa1a25e7b511c0a4e341a3c722e6eac2aa159ab6 # release 3.2.10
+)
 
 if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
 	message(STATUS "Optimizing for Release - Configuring wxWidgets")
@@ -24,8 +38,8 @@ else()
 endif()
 
 set(wxBUILD_SHARED OFF)
-add_subdirectory(modules/wxWidgets-3.2 EXCLUDE_FROM_ALL)
 
+FetchContent_MakeAvailable(OpenEXR wxWidgets)
 
 
 # =============================================================================
@@ -34,7 +48,7 @@ add_subdirectory(modules/wxWidgets-3.2 EXCLUDE_FROM_ALL)
 # Files
 set(ENCORE_FILES
 	src/Main.cpp
-	src/backend/Encore_SequenceImport.cpp)
+	src/internal/SequenceImport.cpp)
 
 if(WIN32)
     # Include a RC file for windows
@@ -48,7 +62,9 @@ set_property(TARGET Encore PROPERTY CXX_STANDARD 20)
 # Link wxWidgets
 target_link_libraries(${PROJECT_NAME}
 	wx::core
-	wx::base)
+	wx::base
+	OpenEXR::OpenEXR)
+
 
 # =============================================================================
 # Optimizations for Release builds
@@ -74,6 +90,7 @@ else()
 	message(STATUS "Debug Mode - Skipping Optimization")
 endif()
 
+
 # =============================================================================
 # Resources, Manifest + bundling
 
@@ -94,7 +111,7 @@ endif()
 # 	RESOURCE "${ENCORE_RESOURCES}")
 
 
-install(TARGETS Encore
-	RESOURCE DESTINATION
-	${CMAKE_INSTALL_PREFIX}/bin/resources)
+# install(TARGETS Encore
+# 	RESOURCE DESTINATION
+# 	${CMAKE_INSTALL_PREFIX}/bin/resources)
 
