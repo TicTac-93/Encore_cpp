@@ -3,10 +3,13 @@
 #include <wx/wx.h>
 #include <wx/spinctrl.h>
 #include <wx/tglbtn.h>
+#include <wx/dc.h>
+#include <wx/generic/statbmpg.h>
 
 #include <format>
 #include <vector>
-#include "../internal/SequenceImport.h"
+#include "../internal/SequenceImporter.h"
+#include "../internal/ImageImporter.h"
 #include "../EncoreEnums.h"
 
 #include <chrono>
@@ -37,16 +40,15 @@ class FrameWidget : public wxPanel {
 			btn_flagFrame = new wxToggleButton(this, ID_BTN_FLAG, "Flag Error");
 			lbl_elapsed = new wxStaticText(this, -1, "###");
 
-			// TEMP Construction
 			auto imageSize = wxSize(100, 56);
-			p_last = new wxPanel(this, ID_IMG_LAST, wxDefaultPosition, imageSize);
-			p_current = new wxPanel(this, ID_IMG_THIS, wxDefaultPosition, imageSize);
-			p_next = new wxPanel(this, ID_IMG_NEXT, wxDefaultPosition, imageSize);
+			p_last = new wxGenericStaticBitmap(this, ID_IMG_LAST, *prev_frame, wxDefaultPosition, imageSize);
+			p_current = new wxGenericStaticBitmap(this, ID_IMG_THIS, *this_frame, wxDefaultPosition, imageSize);
+			p_next = new wxGenericStaticBitmap(this, ID_IMG_NEXT, *next_frame, wxDefaultPosition, imageSize);
+			p_last->SetScaleMode(wxStaticBitmap::ScaleMode::Scale_AspectFill);
+			p_current->SetScaleMode(wxStaticBitmap::ScaleMode::Scale_AspectFill);
+			p_next->SetScaleMode(wxStaticBitmap::ScaleMode::Scale_AspectFill);
 			SetBackgroundColour(wxColor("#eeeeee"));
-			p_last->SetBackgroundColour(wxColor("#aaaaaa"));
-			p_current->SetBackgroundColour(wxColor("#aaaaaa"));
-			p_next->SetBackgroundColour(wxColor("#aaaaaa"));
-
+			
 			// Layout
 			auto *layout = new wxBoxSizer(wxHORIZONTAL);
 			layout->Add(p_last, 0, wxEXPAND);
@@ -92,7 +94,8 @@ class FrameWidget : public wxPanel {
 		float diffLast, diffNext;
 		bool isFlagged;
 
-		wxPanel *p_status, *p_last, *p_current, *p_next;
+		wxPanel *p_status;
+		wxGenericStaticBitmap *p_last, *p_current, *p_next;
 		wxStaticText *lbl_frameNum;
 		wxBitmap *bmp_current, *bmp_last, *bmp_next;  // These should reference a central array of bitmaps, NOT new objs!
 		wxToggleButton *btn_flagFrame;
@@ -158,7 +161,10 @@ class FrameAnalysisPanel : public wxPanel {
 
 		void SetFrameCount(int count) {
 			frameCount = count;
+			frameWidgets->clear();
 			frameWidgets->reserve(count);
+			frameThumbs->clear();
+			frameThumbs->reserve(count);
 			UpdateCountLabel();
 		}
 
@@ -167,7 +173,20 @@ class FrameAnalysisPanel : public wxPanel {
 		}
 
 		FrameWidget* AddFrame(int index) {
-			auto *newFrame = new FrameWidget(p_frameList, -1, bmp_temp, bmp_temp, bmp_temp);
+			wxBitmap *bmp_last, *bmp_next;
+			if (index > 0) {
+				bmp_last = frameThumbs->at(index - 1);
+			} else {
+				bmp_last = bmp_temp;
+			}
+
+			if (index + 1 < frameGroup->GetCount()) {
+				bmp_next = frameThumbs->at(index + 1);
+			} else {
+				bmp_next = bmp_temp;
+			}
+
+			auto *newFrame = new FrameWidget(p_frameList, -1, bmp_last, frameThumbs->at(index), bmp_next);
 			newFrame->SetFrameNum(index, framePadding);
 			frameWidgets->push_back(newFrame);
 			vb_frameList->Add(newFrame, 0, wxEXPAND);
@@ -184,6 +203,13 @@ class FrameAnalysisPanel : public wxPanel {
 
 			// auto timer = std::chrono::high_resolution_clock();
 			// auto time_start = timer.now();
+
+			// Process images in the group
+			// For now, just load the images as thumbnails.
+			for (int i = 0; i < frameGroup->GetCount(); i++) {
+				wxImage *thumbnail = LoadImageEXR(frameGroup->GetFrameAt(i)->GetFilepath(), 4);
+				frameThumbs->push_back(new wxBitmap(*thumbnail));
+			}
 
 			p_frameList->Freeze();
 			for (int i = 0; i < frameGroup->GetCount(); i++) {
@@ -213,5 +239,6 @@ class FrameAnalysisPanel : public wxPanel {
 		int framePadding = 4;
 		int flaggedCount = 0;
 		std::vector<FrameWidget*> *frameWidgets = new std::vector<FrameWidget*>;
+		std::vector<wxBitmap*> *frameThumbs = new std::vector<wxBitmap*>;
 		FrameGroup *frameGroup = nullptr;
 };

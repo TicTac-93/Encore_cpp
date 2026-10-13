@@ -1,4 +1,4 @@
-#include "SequenceImport.h"
+#include "SequenceImporter.h"
 #include <Imath/ImathVec.h>
 
 using namespace encore;
@@ -137,13 +137,6 @@ FramePath* FrameGroup::GetFrameAt(int index) {
 
 
 // ============================================================================
-// CLASS ImageData
-
-ImageData::ImageData() {
-}
-
-
-// ============================================================================
 // FUNCTIONS
 
 int encore::GetFilesInDir(wxString path, wxArrayString *filesArray) {
@@ -159,7 +152,7 @@ int encore::GetFilesInDir(wxString path, wxArrayString *filesArray) {
 	}
 }
 
-std::vector<FrameGroup *>& encore::GroupFrameSequences(wxArrayString *filesArray) {
+std::vector<FrameGroup *>* encore::GroupFrameSequences(wxArrayString *filesArray) {
 	auto groups = new std::vector<FrameGroup *>();
 	for (int i = 0; i < filesArray->GetCount(); i++) {
 		bool found_group = false;
@@ -188,24 +181,5 @@ std::vector<FrameGroup *>& encore::GroupFrameSequences(wxArrayString *filesArray
 		}
 	}
 
-	return *groups;
-}
-
-ImageData& encore::LoadImageEXR(path image_path) {
-	RgbaInputFile file(image_path.filename().string().c_str());
-	Box2i dw = file.dataWindow();
-
-	int width = dw.max.x - dw.min.x + 1;
-	int height = dw.max.y - dw.min.y + 1;
-	auto *pixels = new Array2D<Rgba>(width, height);
-
-	file.setFrameBuffer(pixels[0][0], 1, width);
-	file.readPixels(dw.min.y, dw.max.y);
-
-	auto *output = new ImageData();
-	output->pixels = pixels;
-	*output->width = width;
-	*output->height = height;
-
-	return *output;
+	return groups;
 }

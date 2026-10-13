@@ -9,14 +9,20 @@ message(STATUS "Build Type ${CMAKE_BUILD_TYPE}")
 
 include(FetchContent)
 
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
 # NOTE:
 # This CMakeLists was predominantly configured for MinGW64, for building on Windows.
 # It has also been tested with MSVC, but may have some issues.
 # Other build environments are left as an exercise to the reader :)
 
+
 # =============================================================================
 # Packages
 
+# It seems like OpenEXR automatically collects all required DLLs into the /bin
+# build directory, except for libImath-3_2_d.dll
+# It should be found in the _deps/imath-build/src/Imath/ dir
 FetchContent_Declare(
 	OpenEXR
 	GIT_REPOSITORY https://github.com/AcademySoftwareFoundation/openexr.git
@@ -48,7 +54,8 @@ FetchContent_MakeAvailable(OpenEXR wxWidgets)
 # Files
 set(ENCORE_FILES
 	src/Main.cpp
-	src/internal/SequenceImport.cpp)
+	src/internal/SequenceImporter.cpp
+	src/internal/ImageImporter.cpp)
 
 if(WIN32)
     # Include a RC file for windows
@@ -76,16 +83,18 @@ if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
 			wxDEBUG_LEVEL=0)
 
 	# NOTE: These are configured for gcc, you may need to update them to suit your build environment
-	target_compile_options(${PROJECT_NAME}
-		PUBLIC
-			-Os
-			-s
-			-ffunction-sections
-			-fdata-sections)
+	if(MINGW)
+		target_compile_options(${PROJECT_NAME}
+			PUBLIC
+				-Os
+				-s
+				-ffunction-sections
+				-fdata-sections)
 
-	target_link_options(Encore
-		PUBLIC
-			-Wl,--gc-sections)
+		target_link_options(Encore
+			PUBLIC
+				-Wl,--gc-sections)
+	endif()
 else()
 	message(STATUS "Debug Mode - Skipping Optimization")
 endif()

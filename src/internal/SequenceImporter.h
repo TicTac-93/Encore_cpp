@@ -3,15 +3,10 @@
 #include <wx/wx.h>
 #include <wx/dir.h>
 
-#include <ImfRgbaFile.h>
-#include <ImfRgba.h>
-#include <ImfArray.h>
-
 #include <filesystem>
 #include <ctype.h>
 
 using namespace std::filesystem;
-using namespace OPENEXR_IMF_NAMESPACE;
 
 namespace encore {
 
@@ -88,17 +83,6 @@ class FrameGroup {
 		int *index_min, *index_max, *count;
 };
 
-/// @brief A simple class to store pixel data for an image, along with relavent metadata.
-class ImageData {
-	public:
-		ImageData();
-
-		Array2D<Rgba> *pixels = nullptr;
-		int *width = new int(0);
-		int *height = new int(0);
-		int *bpc = new int(0);
-};
-
 /// @brief Uses wxWidgets to fetch all files in a given directory, writing them to the filesArray.
 /// @param path Path to the directory to be searched.
 /// @param filesArray Pointer to a wxArrayString for storing found file paths.
@@ -109,8 +93,6 @@ int GetFilesInDir(wxString path, wxArrayString *filesArray);
 ///        and returning a vector of all groups.
 /// @param filesArray 
 /// @return 
-std::vector<FrameGroup *>& GroupFrameSequences(wxArrayString *filesArray);
-
-ImageData& LoadImageEXR(path image_path);
+std::vector<FrameGroup *>* GroupFrameSequences(wxArrayString *filesArray);
 
 }

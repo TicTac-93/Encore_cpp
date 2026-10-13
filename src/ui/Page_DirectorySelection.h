@@ -4,7 +4,7 @@
 #include <format>
 #include "FileListCtrl.h"
 #include "../EncoreEnums.h"
-#include "../internal/SequenceImport.h"
+#include "../internal/SequenceImporter.h"
 
 using namespace encore;
 
@@ -134,7 +134,7 @@ class DirSelectPanel : public wxPanel {
 						*fileListArray = filesArray;
 						HideFilelist();
 					} else {
-						*frameGroups = GroupFrameSequences(&filesArray);
+						frameGroups = GroupFrameSequences(&filesArray);
 						fileListArray->Clear();
 						for (int i = 0; i < frameGroups->size(); i++) {
 							auto group = frameGroups->at(i);
