@@ -207,8 +207,10 @@ class FrameAnalysisPanel : public wxPanel {
 			// Process images in the group
 			// For now, just load the images as thumbnails.
 			for (int i = 0; i < frameGroup->GetCount(); i++) {
-				wxImage *thumbnail = LoadImageEXR(frameGroup->GetFrameAt(i)->GetFilepath(), 4);
-				frameThumbs->push_back(new wxBitmap(*thumbnail));
+				// Our ImageData is memory hungry!
+				ImageData *imgData = LoadImageEXR(frameGroup->GetFrameAt(i)->GetFilepath(), 4);
+				frameData->push_back(imgData);
+				frameThumbs->push_back(imgData->CreateBitmap());
 			}
 
 			p_frameList->Freeze();
@@ -216,8 +218,6 @@ class FrameAnalysisPanel : public wxPanel {
 				auto tgtFramePath = frameGroup->GetFrameAt(i);
 				auto newFrame = AddFrame(tgtFramePath->GetIndex());
 				// Style frame widget
-				// newFrame->SetName(std::to_string(
-				// 	std::chrono::duration_cast<std::chrono::microseconds>(timer.now() - time_start).count() / 1000000.0f));
 				newFrame->SetName(tgtFramePath->GetFilepath().stem().string());
 			}
 
@@ -239,6 +239,7 @@ class FrameAnalysisPanel : public wxPanel {
 		int framePadding = 4;
 		int flaggedCount = 0;
 		std::vector<FrameWidget*> *frameWidgets = new std::vector<FrameWidget*>;
+		std::vector<ImageData*> *frameData = new std::vector<ImageData*>;
 		std::vector<wxBitmap*> *frameThumbs = new std::vector<wxBitmap*>;
 		FrameGroup *frameGroup = nullptr;
 };
