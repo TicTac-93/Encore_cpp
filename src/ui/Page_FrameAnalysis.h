@@ -75,7 +75,6 @@ class FrameWidget : public wxPanel {
 		}
 
 		void SetFrameNum(int number, int padding=4) {
-			// TODO: Need to normalize width of frame gutter to avoid misalignment at 10, 100, etc
 			frameNum = number;
 			std::string padded = std::to_string(number);
 			while (padded.length() < padding) {
@@ -155,45 +154,6 @@ class FrameAnalysisPanel : public wxPanel {
 			// Connections
 		}
 
-		void UpdateCountLabel() {
-			lbl_frameCount->SetLabel(std::format("{} Frames ({} Flagged)", frameCount, flaggedCount));
-		}
-
-		void SetFrameCount(int count) {
-			frameCount = count;
-			frameWidgets->clear();
-			frameWidgets->reserve(count);
-			frameThumbs->clear();
-			frameThumbs->reserve(count);
-			UpdateCountLabel();
-		}
-
-		int GetFrameCount() {
-			return frameCount;
-		}
-
-		FrameWidget* AddFrame(int index) {
-			wxBitmap *bmp_last, *bmp_next;
-			if (index > 0) {
-				bmp_last = frameThumbs->at(index - 1);
-			} else {
-				bmp_last = bmp_temp;
-			}
-
-			if (index + 1 < frameGroup->GetCount()) {
-				bmp_next = frameThumbs->at(index + 1);
-			} else {
-				bmp_next = bmp_temp;
-			}
-
-			auto *newFrame = new FrameWidget(p_frameList, -1, bmp_last, frameThumbs->at(index), bmp_next);
-			newFrame->SetFrameNum(index, framePadding);
-			frameWidgets->push_back(newFrame);
-			vb_frameList->Add(newFrame, 0, wxEXPAND);
-
-			return newFrame;
-		}
-
 		void SetFrameGroup(FrameGroup *value) {
 			p_frameList->DestroyChildren();
 			
@@ -204,13 +164,14 @@ class FrameAnalysisPanel : public wxPanel {
 			// auto timer = std::chrono::high_resolution_clock();
 			// auto time_start = timer.now();
 
-			// Process images in the group
-			// For now, just load the images as thumbnails.
+			// Load images in the group
+			LoadImageGroup(*frameGroup, *frameData, 4);
+
+			// Calculate differences
+
+			// Generate thumbnails
 			for (int i = 0; i < frameGroup->GetCount(); i++) {
-				// Our ImageData is memory hungry!
-				ImageData *imgData = LoadImageEXR(frameGroup->GetFrameAt(i)->GetFilepath(), 4);
-				frameData->push_back(imgData);
-				frameThumbs->push_back(imgData->CreateBitmap());
+				frameThumbs->at(i) = frameData->at(i)->CreateBitmap();
 			}
 
 			p_frameList->Freeze();
@@ -242,4 +203,43 @@ class FrameAnalysisPanel : public wxPanel {
 		std::vector<ImageData*> *frameData = new std::vector<ImageData*>;
 		std::vector<wxBitmap*> *frameThumbs = new std::vector<wxBitmap*>;
 		FrameGroup *frameGroup = nullptr;
+
+		void UpdateCountLabel() {
+			lbl_frameCount->SetLabel(std::format("{} Frames ({} Flagged)", frameCount, flaggedCount));
+		}
+
+		void SetFrameCount(int count) {
+			// TODO: Properly delete contents of vectors when clearing
+			// Since we're storing pointers, we need to delete what they're actually pointing to ourselves
+			frameCount = count;
+			frameWidgets->clear();
+			frameWidgets->reserve(count);
+			frameData->clear();
+			frameData->assign(count, nullptr);
+			frameThumbs->clear();
+			frameThumbs->assign(count, nullptr);
+			UpdateCountLabel();
+		}
+
+		FrameWidget* AddFrame(int index) {
+			wxBitmap *bmp_last, *bmp_next;
+			if (index > 0) {
+				bmp_last = frameThumbs->at(index - 1);
+			} else {
+				bmp_last = bmp_temp;
+			}
+
+			if (index + 1 < frameGroup->GetCount()) {
+				bmp_next = frameThumbs->at(index + 1);
+			} else {
+				bmp_next = bmp_temp;
+			}
+
+			auto *newFrame = new FrameWidget(p_frameList, -1, bmp_last, frameThumbs->at(index), bmp_next);
+			newFrame->SetFrameNum(index, framePadding);
+			frameWidgets->push_back(newFrame);
+			vb_frameList->Add(newFrame, 0, wxEXPAND);
+
+			return newFrame;
+		}
 };

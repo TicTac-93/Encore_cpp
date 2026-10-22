@@ -1,5 +1,7 @@
 #include "ImageImporter.h"
 #include <Imath/ImathVec.h>
+#include <thread>
+// #include <ctype.h>
 
 using namespace encore;
 using namespace Imath;
@@ -111,10 +113,10 @@ void ImageData::InitializeData() {
 // ============================================================================
 // FUNCTIONS
 
-ImageData* encore::LoadImageEXR(path image_path, int downsample = 1) {
-	// Clamp downsample factor
-	if (downsample < 1) {
-		downsample = 1;
+ImageData* encore::LoadImageEXR(path image_path, int downsample_factor = 1) {
+	// Clamp downsample_factor
+	if (downsample_factor < 1) {
+		downsample_factor = 1;
 	}
 
 	// EXR loading
@@ -129,11 +131,11 @@ ImageData* encore::LoadImageEXR(path image_path, int downsample = 1) {
 	file.setFrameBuffer(&pixels[0][0], 1, width);
 	file.readPixels(dw.min.y, dw.max.y);
 	
-	int output_w = width / downsample;
-	int output_h = height / downsample;
+	int output_w = width / downsample_factor;
+	int output_h = height / downsample_factor;
 	ImageData* output = new ImageData(output_w, output_h);
-	for (int y1 = 0, y2 = 0; y1 < height; y1 += downsample, y2++) {
-		for (int x1 = 0, x2 = 0; x1 < width; x1 += downsample, x2++) {
+	for (int y1 = 0, y2 = 0; y1 < height; y1 += downsample_factor, y2++) {
+		for (int x1 = 0, x2 = 0; x1 < width; x1 += downsample_factor, x2++) {
 			Rgba pixel = pixels[y1][x1]; // EXR pixel
 			Rgb &out_px = output->Pixel(x2, y2); // ImageData pixel
 			out_px.r = pixel.r;
@@ -143,4 +145,44 @@ ImageData* encore::LoadImageEXR(path image_path, int downsample = 1) {
 	}
 
 	return output;
+}
+
+void encore::LoadImageThread(
+	path tgt_image,
+	int index,
+	ImageData* (*loader)(path, int),
+	std::vector<ImageData*> *loaded_images,
+	std::mutex *mtx_loaded_images,
+	int downsample_factor)
+{
+	ImageData *imgData = loader(tgt_image, downsample_factor);
+
+	mtx_loaded_images->lock();
+	(*loaded_images)[index] = imgData;
+	mtx_loaded_images->unlock();
+}
+
+int encore::LoadImageGroup(FrameGroup& frame_group, std::vector<ImageData*> &loaded_images, int downsample_factor = 1) {
+	int frame_count = frame_group.GetCount();
+	std::thread *loading_threads[frame_count];
+	auto mtx1 = new std::mutex();
+
+	if (frame_group.GetFiletype() == ".exr") {
+		for (int i = 0; i < frame_count; i++) {
+			auto loader_thread = new std::thread(LoadImageThread, frame_group.GetFrameAt(i)->GetFilepath(), i, &encore::LoadImageEXR, &loaded_images, mtx1, downsample_factor);
+			loading_threads[i] = loader_thread;
+		}
+	}
+	else {
+		return 1;
+	}
+
+	for (int i = 0; i < frame_count; i++) {
+		loading_threads[i]->join();
+		delete loading_threads[i];
+	}
+
+	delete mtx1;
+
+	return 0;
 }
