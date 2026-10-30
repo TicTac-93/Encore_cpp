@@ -154,25 +154,13 @@ class FrameAnalysisPanel : public wxPanel {
 			// Connections
 		}
 
-		void SetFrameGroup(FrameGroup *value) {
-			p_frameList->DestroyChildren();
-			
+		void SetFrameGroup(FrameGroup *value) {			
 			frameGroup = value;
 			SetFrameCount(frameGroup->GetCount());
 			framePadding = std::to_string(frameCount).length();
 
-			// auto timer = std::chrono::high_resolution_clock();
-			// auto time_start = timer.now();
-
 			// Load images in the group
-			LoadImageGroup(*frameGroup, *frameData, 4);
-
-			// Calculate differences
-
-			// Generate thumbnails
-			for (int i = 0; i < frameGroup->GetCount(); i++) {
-				frameThumbs->at(i) = frameData->at(i)->CreateBitmap();
-			}
+			LoadAndAnalyzeGroup(*frameGroup, *frameData, 4);
 
 			p_frameList->Freeze();
 			for (int i = 0; i < frameGroup->GetCount(); i++) {
@@ -201,7 +189,6 @@ class FrameAnalysisPanel : public wxPanel {
 		int flaggedCount = 0;
 		std::vector<FrameWidget*> *frameWidgets = new std::vector<FrameWidget*>;
 		std::vector<ImageData*> *frameData = new std::vector<ImageData*>;
-		std::vector<wxBitmap*> *frameThumbs = new std::vector<wxBitmap*>;
 		FrameGroup *frameGroup = nullptr;
 
 		void UpdateCountLabel() {
@@ -209,35 +196,39 @@ class FrameAnalysisPanel : public wxPanel {
 		}
 
 		void SetFrameCount(int count) {
-			// TODO: Properly delete contents of vectors when clearing
-			// Since we're storing pointers, we need to delete what they're actually pointing to ourselves
 			frameCount = count;
+			UpdateCountLabel();
+
+			// Widgets
+			p_frameList->DestroyChildren();
 			frameWidgets->clear();
-			frameWidgets->reserve(count);
+			frameWidgets->assign(count, nullptr);
+
+			// Image Data
+			for (int i = 0; i < frameData->size(); i++) {
+				delete frameData->at(i);
+			}
 			frameData->clear();
 			frameData->assign(count, nullptr);
-			frameThumbs->clear();
-			frameThumbs->assign(count, nullptr);
-			UpdateCountLabel();
 		}
 
 		FrameWidget* AddFrame(int index) {
 			wxBitmap *bmp_last, *bmp_next;
 			if (index > 0) {
-				bmp_last = frameThumbs->at(index - 1);
+				bmp_last = frameData->at(index - 1)->Bitmap();
 			} else {
 				bmp_last = bmp_temp;
 			}
 
 			if (index + 1 < frameGroup->GetCount()) {
-				bmp_next = frameThumbs->at(index + 1);
+				bmp_next = frameData->at(index + 1)->Bitmap();
 			} else {
 				bmp_next = bmp_temp;
 			}
 
-			auto *newFrame = new FrameWidget(p_frameList, -1, bmp_last, frameThumbs->at(index), bmp_next);
+			auto *newFrame = new FrameWidget(p_frameList, -1, bmp_last, frameData->at(index)->Bitmap(), bmp_next);
 			newFrame->SetFrameNum(index, framePadding);
-			frameWidgets->push_back(newFrame);
+			frameWidgets->at(index) = newFrame;
 			vb_frameList->Add(newFrame, 0, wxEXPAND);
 
 			return newFrame;
