@@ -1,12 +1,14 @@
 #include "ImageImporter.h"
 #include <Imath/ImathVec.h>
 #include <thread>
+#include <format>
 // #include <ctype.h>
 
 using namespace encore;
 using namespace Imath;
 
 const int THREAD_SLEEP_DUR = 10;
+const int CONCURRENT_LOAD_LIMIT = 10;
 
 
 // ============================================================================
@@ -178,10 +180,9 @@ ImageData* encore::LoadImageEXR(path image_path, int downsample_factor = 1) {
 int encore::LoadAndAnalyzeGroup(
 	FrameGroup& frame_group,
 	std::vector<ImageData*> &loaded_images,
-	int downsample_factor = 1)
+	int downsample_factor,
+	wxProgressDialog *progress_dialog)
 {
-	const int LOAD_LIMIT = 10;
-
 	int frame_count = frame_group.GetCount();
 	int *loaded_count = new int(0);
 	std::thread *loading_threads[frame_count];
@@ -260,9 +261,13 @@ int encore::LoadAndAnalyzeGroup(
 		clear_threads[i] = clear_thread;
 	}
 
-	// Unlock load threads sequentially, until LOAD_LIMIT is reached
+	// Unlock load threads sequentially, until CONCURRENT_LOAD_LIMIT is reached
 	for (int i = 0; i < frame_count; i++) {
-		while ((*loaded_count) >= LOAD_LIMIT) {
+		if (progress_dialog != nullptr) {
+			progress_dialog->Update(i, std::format("Loading {}/{}...", i+1, frame_count));
+		}
+
+		while ((*loaded_count) >= CONCURRENT_LOAD_LIMIT) {
 			Sleep(THREAD_SLEEP_DUR);
 		}
 		mtx_loaded_counter->lock();

@@ -5,6 +5,7 @@
 #include <wx/tglbtn.h>
 #include <wx/dc.h>
 #include <wx/generic/statbmpg.h>
+#include <wx/progdlg.h>
 
 #include <format>
 #include <vector>
@@ -24,10 +25,10 @@ class FrameWidget : public wxPanel {
 			: wxPanel(parent, w_id)
 		{
 			// Initialize internal vars to defaults
-			frameNum = -1;
-			diffLast = 0.0f;
-			diffNext = 0.0f;
-			isFlagged = false;
+			_frameNum = -1;
+			_diffLast = 0.0f;
+			_diffNext = 0.0f;
+			_isFlagged = false;
 
 
 			// Construction
@@ -75,7 +76,7 @@ class FrameWidget : public wxPanel {
 		}
 
 		void SetFrameNum(int number, int padding=4) {
-			frameNum = number;
+			_frameNum = number;
 			std::string padded = std::to_string(number);
 			while (padded.length() < padding) {
 				padded = "0" + padded;
@@ -88,10 +89,28 @@ class FrameWidget : public wxPanel {
 			lbl_elapsed->SetLabel(value);
 		}
 
+		void SetFlagged(bool flagged) {
+			_isFlagged = flagged;
+
+			if (flagged) {
+				p_status->SetBackgroundColour(wxColor("#f7aa37"));
+			}
+			else {
+				p_status->SetBackgroundColour(wxColor("#6ebe63"));
+			}
+
+			p_status->Refresh();
+			Update();
+		}
+
+		bool IsFlagged() {
+			return _isFlagged;
+		}
+
 	private:
-		int frameNum;
-		float diffLast, diffNext;
-		bool isFlagged;
+		int _frameNum;
+		float _diffLast, _diffNext;
+		bool _isFlagged;
 
 		wxPanel *p_status;
 		wxGenericStaticBitmap *p_last, *p_current, *p_next;
@@ -113,10 +132,11 @@ class FrameAnalysisPanel : public wxPanel {
 			lbl_frameCount = new wxStaticText(this, -1, "");
 			chk_showOnlyFlagged = new wxCheckBox(this, ID_CHK_ONLYFLAGGED,
 				wxT("Only show Flagged frames"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+			chk_showOnlyFlagged->SetValue(hideUnflagged);
 			lbl_thresh = new wxStaticText(this, -1, "Detection Threshold:");
 			spn_thresh = new wxSpinCtrlDouble(this, ID_SPN_THRESH, wxEmptyString,
-				wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT,
-				0.0, 1.0, 0.0, 0.01);
+				wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT || wxTE_PROCESS_ENTER,
+				0.0, 100.0, 5.0, 0.1);
 			chk_autoThresh = new wxCheckBox(this, ID_CHK_AUTOTHRESH,
 				wxT("Auto"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
 
@@ -124,7 +144,7 @@ class FrameAnalysisPanel : public wxPanel {
 			p_frameList = new wxScrolled<wxPanel>(this);
 			// p_frameList->SetBackgroundColour(wxColor("#aaaaaa"));
 			p_frameList->SetSizer(vb_frameList);
-			p_frameList->SetScrollRate(10, 10);
+			p_frameList->SetScrollRate(SCROLL_RATE, SCROLL_RATE);
 
 			bmp_temp = new wxBitmap();
 			bmp_temp->Create(960, 540, -1);
@@ -152,23 +172,35 @@ class FrameAnalysisPanel : public wxPanel {
 
 
 			// Connections
+			Bind(wxEVT_SPINCTRLDOUBLE, &FrameAnalysisPanel::OnThresholdChange, this, ID_SPN_THRESH);
+			Bind(wxEVT_CHECKBOX, &FrameAnalysisPanel::OnOnlyFlaggedChange, this, ID_CHK_ONLYFLAGGED);
 		}
 
-		void SetFrameGroup(FrameGroup *value) {			
+		void SetFrameGroup(FrameGroup *value) {
 			frameGroup = value;
 			SetFrameCount(frameGroup->GetCount());
 			framePadding = std::to_string(frameCount).length();
 
+			// Spawn progress dialog
+			wxProgressDialog prog_dialog("Loading Frame Sequence...", "", frameCount, this,
+				wxPD_APP_MODAL);
+
 			// Load images in the group
-			LoadAndAnalyzeGroup(*frameGroup, *frameData, 4);
+			LoadAndAnalyzeGroup(*frameGroup, *frameData, 4, &prog_dialog);
+
 
 			p_frameList->Freeze();
-			for (int i = 0; i < frameGroup->GetCount(); i++) {
+			for (int i = 0; i < frameCount; i++) {
+				prog_dialog.Update(i, std::format("Updating UI..."));
+
 				auto tgtFramePath = frameGroup->GetFrameAt(i);
 				auto newFrame = AddFrame(tgtFramePath->GetIndex());
 				// Style frame widget
 				newFrame->SetName(tgtFramePath->GetFilepath().stem().string());
 			}
+
+			// Flag images using analysis data and current threshold
+			UpdateFrameFlags();
 
 			Layout();
 			p_frameList->Thaw();
@@ -187,6 +219,13 @@ class FrameAnalysisPanel : public wxPanel {
 		int frameCount = 0;
 		int framePadding = 4;
 		int flaggedCount = 0;
+		float threshold = 0.05f;
+		std::chrono::steady_clock *threshTimer = new std::chrono::steady_clock();
+		std::chrono::time_point<std::chrono::steady_clock> threshLastUpdated = threshTimer->now();
+		bool hideUnflagged = true;
+
+		int SCROLL_RATE = 10;
+
 		std::vector<FrameWidget*> *frameWidgets = new std::vector<FrameWidget*>;
 		std::vector<ImageData*> *frameData = new std::vector<ImageData*>;
 		FrameGroup *frameGroup = nullptr;
@@ -233,4 +272,91 @@ class FrameAnalysisPanel : public wxPanel {
 
 			return newFrame;
 		}
+
+		void UpdateFrameFlags() {
+			for (int i = 0; i < frameCount; i++) {
+				auto widget = frameWidgets->at(i);
+				auto frame = frameData->at(i);
+				ImageData* prev = nullptr;
+				ImageData* next = nullptr;
+				float prev_a = 0.f;
+				float next_b = 0.f;
+				bool flag = false;
+
+				// Prev frame data
+				if (i > 0) {
+					prev = frameData->at(i-1);
+					prev_a = prev->a_mean;
+				}
+
+				// Next frame data
+				if (i+1 < frameCount) {
+					next = frameData->at(i+1);
+					next_b = next->b_mean;
+				}
+
+				// Test vs prev frame
+				if (prev != nullptr
+				&&  prev_a > 0
+				&&  frame->a_mean > prev_a
+				&&  frame->a_mean - prev_a > threshold * prev_a) {
+					flag = true;
+				}
+
+				// Test vs next frame
+				if (!flag
+				&&  next != nullptr
+				&&  next_b > 0
+				&&  frame->b_mean > next_b
+				&&  frame->b_mean - next_b > threshold * next_b) {
+					flag = true;
+				}
+
+				widget->SetFlagged(flag);
+			}
+			
+			HideUnflaggedFrames(hideUnflagged);
+		}
+
+		void HideUnflaggedFrames(bool state) {
+			p_frameList->Freeze();
+
+			if (state) {
+				for (int i = 0; i < frameCount; i++) {
+
+					auto frame = frameWidgets->at(i);
+					if (frame->IsFlagged()) {
+						frame->Show();
+					} else {
+						frame->Hide();
+					}
+				}
+			} else {
+				for (int i = 0; i < frameCount; i++) {
+					frameWidgets->at(i)->Show();
+				}
+			}
+
+			p_frameList->Layout();
+			p_frameList->Thaw();
+			Layout();
+		}
+
+		void OnThresholdChange(wxCommandEvent &event) {
+			threshold = spn_thresh->GetValue() / 100;
+
+			// if (threshTimer->now() - threshLastUpdated < std::chrono::milliseconds(500)) {
+			// 	return;
+			// }
+
+			threshLastUpdated = threshTimer->now();
+			UpdateFrameFlags();
+		}
+
+		void OnOnlyFlaggedChange(wxCommandEvent &event) {
+			hideUnflagged = chk_showOnlyFlagged->IsChecked();
+
+			HideUnflaggedFrames(hideUnflagged);
+		}
+
 };

@@ -2,6 +2,7 @@
 
 #include <wx/image.h>
 #include <wx/bitmap.h>
+#include <wx/progdlg.h>
 
 #include <ImfRgbaFile.h>
 #include <ImfRgba.h>
@@ -88,11 +89,13 @@ ImageData* LoadImageEXR(path image_path, int downsample_factor);
 /// @param frame_group The FrameGroup to load
 /// @param loaded_images Avector of ImageData pointers, to receive the loaded images.  Will be initialized with nullptrs.
 /// @param downsample_factor Optional, the factor to downsample images by.  2 = half res, 4 = quarter, etc.  Default is 1 (full res)
+/// @param progress_dialog Optional, a progress dialog to update
 /// @return Error code (0 = no error).  Image data can be accessed via the vector passed to loaded_images.
 int LoadAndAnalyzeGroup(
 	FrameGroup &frame_group,
 	std::vector<ImageData*> &loaded_images,
-	int downsample_factor);
+	int downsample_factor = 1,
+	wxProgressDialog *progress_dialog = nullptr);
 
 /// @brief Loads a signle image and stores it at loaded_images[index].  Used in multi-threading.
 /// @param tgt_image Path to the image to load.
