@@ -86,8 +86,6 @@ if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
 	if(MINGW)
 		target_compile_options(${PROJECT_NAME}
 			PUBLIC
-				-Os
-				-s
 				-ffunction-sections
 				-fdata-sections)
 
