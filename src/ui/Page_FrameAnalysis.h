@@ -39,7 +39,9 @@ class FrameWidget : public wxPanel {
 			bmp_current = this_frame;
 			bmp_next = next_frame;
 			btn_flagFrame = new wxToggleButton(this, ID_BTN_FLAG, "Flag Error");
-			lbl_elapsed = new wxStaticText(this, -1, "###");
+			lbl_filename = new wxStaticText(this, -1, "###");
+			lbl_statA = new wxStaticText(this, -1, "XXX", wxDefaultPosition, wxDefaultSize, wxTEXT_ALIGNMENT_RIGHT);
+			lbl_statB = new wxStaticText(this, -1, "XXX");
 
 			auto imageSize = wxSize(100, 56);
 			p_last = new wxGenericStaticBitmap(this, ID_IMG_LAST, *prev_frame, wxDefaultPosition, imageSize);
@@ -59,8 +61,15 @@ class FrameWidget : public wxPanel {
 			layout->Add(p_next, 0, wxEXPAND);
 			layout->AddSpacer(PAD_MED);
 			layout->Add(btn_flagFrame, 0, wxALIGN_CENTER);
+
+			auto *vbox_1 = new wxBoxSizer(wxVERTICAL);
+			vbox_1->Add(lbl_filename, 0, wxEXPAND);
+			vbox_1->Add(lbl_statA, 0, wxEXPAND);
+			vbox_1->Add(lbl_statB, 0, wxEXPAND);
+			vbox_1->AddStretchSpacer();
+			
 			layout->AddStretchSpacer();
-			layout->Add(lbl_elapsed, 0, wxEXPAND);
+			layout->Add(vbox_1, 0, wxEXPAND);
 
 			auto *hbox_1 = new wxBoxSizer(wxHORIZONTAL);
 			hbox_1->Add(lbl_frameNum, 0, wxALIGN_TOP | wxTOP, PAD_MED);
@@ -86,7 +95,12 @@ class FrameWidget : public wxPanel {
 		}
 
 		void SetName(std::string value) {
-			lbl_elapsed->SetLabel(value);
+			lbl_filename->SetLabel(value);
+		}
+
+		void SetStatLabels(float mean_a, float mean_b) {
+			lbl_statA->SetLabel(std::format("Diff Prev: {:.4f}", mean_a));
+			lbl_statB->SetLabel(std::format("Diff Next: {:.4f}", mean_b));
 		}
 
 		void SetFlagged(bool flagged) {
@@ -117,7 +131,9 @@ class FrameWidget : public wxPanel {
 		wxStaticText *lbl_frameNum;
 		wxBitmap *bmp_current, *bmp_last, *bmp_next;  // These should reference a central array of bitmaps, NOT new objs!
 		wxToggleButton *btn_flagFrame;
-		wxStaticText *lbl_elapsed;
+		wxStaticText *lbl_filename;
+		wxStaticText *lbl_statA;
+		wxStaticText *lbl_statB;
 
 		wxStaticText *lbl_last = new wxStaticText(this, -1, "<");
 		wxStaticText *lbl_next = new wxStaticText(this, -1, ">");
@@ -133,12 +149,13 @@ class FrameAnalysisPanel : public wxPanel {
 			chk_showOnlyFlagged = new wxCheckBox(this, ID_CHK_ONLYFLAGGED,
 				wxT("Only show Flagged frames"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
 			chk_showOnlyFlagged->SetValue(hideUnflagged);
-			lbl_thresh = new wxStaticText(this, -1, "Detection Threshold:");
+			lbl_thresh = new wxStaticText(this, -1, "Filter Threshold:");
 			spn_thresh = new wxSpinCtrlDouble(this, ID_SPN_THRESH, wxEmptyString,
 				wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT || wxTE_PROCESS_ENTER,
 				0.0, 100.0, 5.0, 0.1);
 			chk_autoThresh = new wxCheckBox(this, ID_CHK_AUTOTHRESH,
 				wxT("Auto"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+			chk_autoThresh->SetValue(true);
 
 			vb_frameList = new wxBoxSizer(wxVERTICAL);
 			p_frameList = new wxScrolled<wxPanel>(this);
@@ -159,7 +176,7 @@ class FrameAnalysisPanel : public wxPanel {
 			hb_top->AddStretchSpacer();
 			hb_top->Add(lbl_thresh, 0, wxALIGN_CENTER);
 			hb_top->Add(spn_thresh, 0);
-			hb_top->Add(chk_autoThresh, 0, wxALIGN_CENTER);
+			hb_top->Add(chk_autoThresh, 0, wxALIGN_CENTER | wxLEFT, PAD_SML);
 
 			layout->Add(lbl_frameCount, 0, wxEXPAND);
 			layout->Add(hb_top, 0, wxEXPAND);
@@ -173,7 +190,9 @@ class FrameAnalysisPanel : public wxPanel {
 
 			// Connections
 			Bind(wxEVT_SPINCTRLDOUBLE, &FrameAnalysisPanel::OnThresholdChange, this, ID_SPN_THRESH);
+			Bind(wxEVT_TEXT, &FrameAnalysisPanel::OnThresholdChange, this, ID_SPN_THRESH);
 			Bind(wxEVT_CHECKBOX, &FrameAnalysisPanel::OnOnlyFlaggedChange, this, ID_CHK_ONLYFLAGGED);
+			Bind(wxEVT_CHECKBOX, &FrameAnalysisPanel::OnAutoThreshChange, this, ID_CHK_AUTOTHRESH);
 		}
 
 		void SetFrameGroup(FrameGroup *value) {
@@ -188,18 +207,20 @@ class FrameAnalysisPanel : public wxPanel {
 			// Load images in the group
 			LoadAndAnalyzeGroup(*frameGroup, *frameData, 4, &prog_dialog);
 
-
 			p_frameList->Freeze();
 			for (int i = 0; i < frameCount; i++) {
 				prog_dialog.Update(i, std::format("Updating UI..."));
 
 				auto tgtFramePath = frameGroup->GetFrameAt(i);
+				auto tgtFrameData = frameData->at(i);
 				auto newFrame = AddFrame(tgtFramePath->GetIndex());
 				// Style frame widget
 				newFrame->SetName(tgtFramePath->GetFilepath().stem().string());
+				newFrame->SetStatLabels(tgtFrameData->a_mean, tgtFrameData->b_mean);
 			}
 
 			// Flag images using analysis data and current threshold
+			UpdateAutoThresh();
 			UpdateFrameFlags();
 
 			Layout();
@@ -220,8 +241,7 @@ class FrameAnalysisPanel : public wxPanel {
 		int framePadding = 4;
 		int flaggedCount = 0;
 		float threshold = 0.05f;
-		std::chrono::steady_clock *threshTimer = new std::chrono::steady_clock();
-		std::chrono::time_point<std::chrono::steady_clock> threshLastUpdated = threshTimer->now();
+		float auto_thresh = 0.0f;
 		bool hideUnflagged = true;
 
 		int SCROLL_RATE = 10;
@@ -274,6 +294,8 @@ class FrameAnalysisPanel : public wxPanel {
 		}
 
 		void UpdateFrameFlags() {
+			int flag_count = 0;
+
 			for (int i = 0; i < frameCount; i++) {
 				auto widget = frameWidgets->at(i);
 				auto frame = frameData->at(i);
@@ -313,8 +335,11 @@ class FrameAnalysisPanel : public wxPanel {
 				}
 
 				widget->SetFlagged(flag);
+				if (flag) flag_count ++;
 			}
 			
+			flaggedCount = flag_count;
+			UpdateCountLabel();
 			HideUnflaggedFrames(hideUnflagged);
 		}
 
@@ -342,14 +367,43 @@ class FrameAnalysisPanel : public wxPanel {
 			Layout();
 		}
 
+		void UpdateAutoThresh() {
+			// Update the threshold based on the standard deviation of diff values
+
+
+			// Get total mean
+			float total_mean_diff = 0.f;
+			float mean_diffs[frameCount-1];
+			float mean_of_means = 0.f; // Used for setting the auto threshold
+			for (int i = 0; i < frameCount - 1; i++) {
+				mean_diffs[i] = fabs(frameData->at(i)->b_mean - frameData->at(i+1)->b_mean);
+				total_mean_diff += mean_diffs[i];
+
+				mean_of_means += frameData->at(i)->b_mean;
+			}
+			total_mean_diff /= (frameCount - 1);
+			mean_of_means /= (frameCount - 1);
+
+			// Update mean_diffs to be difference from total_mean_diff
+			// Simultaneously square those values and sum them
+			float stdev = 0.f;
+			for (int i = 0; i < frameCount - 1; i++) {
+				mean_diffs[i] -= total_mean_diff;
+				stdev += (mean_diffs[i] * mean_diffs[i]);
+			}
+
+			// Divide by our sample size (frameCount-1) and get sqrt for standard deviation
+			stdev /= (frameCount - 1);
+			stdev = sqrtf(stdev);
+
+			// Update threshold value and GUI
+			// Half of one standard deviation works fairly well
+			auto_thresh = stdev / mean_of_means / 2;
+			OnAutoThreshChange(false);
+		}
+
 		void OnThresholdChange(wxCommandEvent &event) {
-			threshold = spn_thresh->GetValue() / 100;
-
-			// if (threshTimer->now() - threshLastUpdated < std::chrono::milliseconds(500)) {
-			// 	return;
-			// }
-
-			threshLastUpdated = threshTimer->now();
+			threshold = std::stof(spn_thresh->GetTextValue().ToStdString()) / 100;
 			UpdateFrameFlags();
 		}
 
@@ -357,6 +411,24 @@ class FrameAnalysisPanel : public wxPanel {
 			hideUnflagged = chk_showOnlyFlagged->IsChecked();
 
 			HideUnflaggedFrames(hideUnflagged);
+		}
+
+		void OnAutoThreshChange(bool update_flags=true) {
+			if (chk_autoThresh->GetValue()) {
+				threshold = auto_thresh;
+				spn_thresh->SetValue(auto_thresh * 100); // Spinner uses scaled values for readability
+				spn_thresh->Disable();
+				
+				if (update_flags) UpdateFrameFlags();
+			} else {
+				spn_thresh->Enable();
+			}
+
+		}
+
+		// Wrapper for Binding to ui event
+		void OnAutoThreshChange(wxCommandEvent &event) {
+			OnAutoThreshChange();
 		}
 
 };

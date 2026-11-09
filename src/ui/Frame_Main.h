@@ -53,8 +53,10 @@ class EncoreFrame : public wxFrame {
 			// Protect against a failure to get FrameGroups
 			if (framesToLoad == nullptr) return;
 
-
 			p_frameAnalysis->SetFrameGroup((*framesToLoad)[0]);
+
+			SetSize(750, 500);
+			nb_main->SetSelection(1);
 
 			delete framesToLoad;
 		}
