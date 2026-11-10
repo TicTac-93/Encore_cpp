@@ -28,7 +28,7 @@ class EncoreFrame : public wxFrame {
 			nb_main->AddPage(p_frameAnalysis, "Review Frames");
 
 			// Layout
-			SetMenuBar(menu); // Breaks initial layout if added before the sizer
+			// SetMenuBar(menu); // Breaks initial layout if added before the sizer
 
 			// Connections
 			Bind(wxEVT_MENU, &EncoreFrame::OnQuit, this, wxID_EXIT); // Binds to a method of this class

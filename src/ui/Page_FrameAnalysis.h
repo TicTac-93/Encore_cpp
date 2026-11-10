@@ -24,13 +24,6 @@ class FrameWidget : public wxPanel {
 		FrameWidget(wxWindow *parent, int w_id, wxBitmap *prev_frame, wxBitmap *this_frame, wxBitmap *next_frame)
 			: wxPanel(parent, w_id)
 		{
-			// Initialize internal vars to defaults
-			_frameNum = -1;
-			_diffLast = 0.0f;
-			_diffNext = 0.0f;
-			_isFlagged = false;
-
-
 			// Construction
 			p_status = new wxPanel(this, -1, wxDefaultPosition, wxSize(PAD_MED, -1));
 			p_status->SetBackgroundColour(wxColor("#6ebe63"));
@@ -38,7 +31,10 @@ class FrameWidget : public wxPanel {
 			bmp_last = prev_frame;
 			bmp_current = this_frame;
 			bmp_next = next_frame;
-			btn_flagFrame = new wxToggleButton(this, ID_BTN_FLAG, "Flag Error");
+			btn_markError = new wxButton(this, ID_BTN_FLAG_ERR, "Mark Error");
+			btn_markError->SetHelpText("Mark this frame as an error, so it will be included in the frame list regardless of the current filter.");
+			btn_markOK = new wxButton(this, ID_BTN_FLAG_OK, "Mark OK");
+			btn_markError->SetHelpText("Mark this frame as OK, so it will be excluded from the frame list regardless of the current filter.");
 			lbl_filename = new wxStaticText(this, -1, "###");
 			lbl_statA = new wxStaticText(this, -1, "XXX", wxDefaultPosition, wxDefaultSize, wxTEXT_ALIGNMENT_RIGHT);
 			lbl_statB = new wxStaticText(this, -1, "XXX");
@@ -59,17 +55,23 @@ class FrameWidget : public wxPanel {
 			layout->Add(p_current, 0, wxEXPAND);
 			layout->Add(lbl_next, 0, wxALIGN_CENTER | wxALL, PAD_SML);
 			layout->Add(p_next, 0, wxEXPAND);
-			layout->AddSpacer(PAD_MED);
-			layout->Add(btn_flagFrame, 0, wxALIGN_CENTER);
 
 			auto *vbox_1 = new wxBoxSizer(wxVERTICAL);
-			vbox_1->Add(lbl_filename, 0, wxEXPAND);
-			vbox_1->Add(lbl_statA, 0, wxEXPAND);
-			vbox_1->Add(lbl_statB, 0, wxEXPAND);
-			vbox_1->AddStretchSpacer();
+			vbox_1->Add(btn_markOK, 1, wxEXPAND);
+			vbox_1->AddSpacer(PAD_SML);
+			vbox_1->Add(btn_markError, 1, wxEXPAND);
+
+			layout->AddSpacer(PAD_MED);
+			layout->Add(vbox_1, 1, wxEXPAND);
+
+			auto *vbox_2 = new wxBoxSizer(wxVERTICAL);
+			vbox_2->Add(lbl_filename, 0, wxEXPAND);
+			vbox_2->Add(lbl_statA, 0, wxEXPAND);
+			vbox_2->Add(lbl_statB, 0, wxEXPAND);
+			vbox_2->AddStretchSpacer();
 			
 			layout->AddStretchSpacer();
-			layout->Add(vbox_1, 0, wxEXPAND);
+			layout->Add(vbox_2, 0, wxEXPAND);
 
 			auto *hbox_1 = new wxBoxSizer(wxHORIZONTAL);
 			hbox_1->Add(lbl_frameNum, 0, wxALIGN_TOP | wxTOP, PAD_MED);
@@ -82,6 +84,8 @@ class FrameWidget : public wxPanel {
 
 
 			// Connections
+			Bind(wxEVT_BUTTON, FrameWidget::OnMarkedError, this, ID_BTN_FLAG_ERR);
+			Bind(wxEVT_BUTTON, FrameWidget::OnMarkedOK, this, ID_BTN_FLAG_OK);
 		}
 
 		void SetFrameNum(int number, int padding=4) {
@@ -92,6 +96,10 @@ class FrameWidget : public wxPanel {
 			}
 
 			lbl_frameNum->SetLabel(padded);
+		}
+
+		int GetFrameNum() {
+			return _frameNum;
 		}
 
 		void SetName(std::string value) {
@@ -105,8 +113,51 @@ class FrameWidget : public wxPanel {
 
 		void SetFlagged(bool flagged) {
 			_isFlagged = flagged;
+			UpdateStatusBar();
+		}
 
-			if (flagged) {
+		bool IsFlagged() {
+			return _isFlagged;
+		}
+
+		bool IsMarkedError() {
+			return _isMarkedError;
+		}
+
+		bool IsMarkedOK() {
+			return _isMarkedOK;
+		}
+
+	private:
+		int _frameNum = -1;
+		float _diffLast = 0.f;
+		float _diffNext = 0.f;
+		bool _isFlagged = false; // Set by the flagging algorithm and threshold
+		bool _isMarkedError = false; // Manually set by user, overrides flagging
+		bool _isMarkedOK = false; // Manually set by user, overrides flagging
+
+		wxPanel *p_status;
+		wxGenericStaticBitmap *p_last, *p_current, *p_next;
+		wxStaticText *lbl_frameNum;
+		wxBitmap *bmp_current, *bmp_last, *bmp_next;  // These should reference a central array of bitmaps, NOT new objs!
+		wxButton *btn_markError;
+		wxButton *btn_markOK;
+		wxStaticText *lbl_filename;
+		wxStaticText *lbl_statA;
+		wxStaticText *lbl_statB;
+
+		wxStaticText *lbl_last = new wxStaticText(this, -1, "<");
+		wxStaticText *lbl_next = new wxStaticText(this, -1, ">");
+
+		void UpdateStatusBar() {
+
+			if (_isMarkedError) {			
+				p_status->SetBackgroundColour(wxColor("#ee6259"));
+			}
+			else if (_isMarkedOK) {
+				p_status->SetBackgroundColour(wxColor("#6ebe63"));
+			}
+			else if (_isFlagged) {
 				p_status->SetBackgroundColour(wxColor("#f7aa37"));
 			}
 			else {
@@ -117,26 +168,19 @@ class FrameWidget : public wxPanel {
 			Update();
 		}
 
-		bool IsFlagged() {
-			return _isFlagged;
+		void OnMarkedError(wxCommandEvent &event) {
+			_isMarkedError = !_isMarkedError;
+			_isMarkedOK = false;
+			UpdateStatusBar();
+			event.Skip();
 		}
-
-	private:
-		int _frameNum;
-		float _diffLast, _diffNext;
-		bool _isFlagged;
-
-		wxPanel *p_status;
-		wxGenericStaticBitmap *p_last, *p_current, *p_next;
-		wxStaticText *lbl_frameNum;
-		wxBitmap *bmp_current, *bmp_last, *bmp_next;  // These should reference a central array of bitmaps, NOT new objs!
-		wxToggleButton *btn_flagFrame;
-		wxStaticText *lbl_filename;
-		wxStaticText *lbl_statA;
-		wxStaticText *lbl_statB;
-
-		wxStaticText *lbl_last = new wxStaticText(this, -1, "<");
-		wxStaticText *lbl_next = new wxStaticText(this, -1, ">");
+		
+		void OnMarkedOK(wxCommandEvent &event) {
+			_isMarkedOK = !_isMarkedOK;
+			_isMarkedError = false;
+			UpdateStatusBar();
+			event.Skip();
+		}
 };
 
 class FrameAnalysisPanel : public wxPanel {
@@ -156,6 +200,8 @@ class FrameAnalysisPanel : public wxPanel {
 			chk_autoThresh = new wxCheckBox(this, ID_CHK_AUTOTHRESH,
 				wxT("Auto"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
 			chk_autoThresh->SetValue(true);
+			te_flaggedFrames = new wxTextCtrl(this, -1, "", wxDefaultPosition, wxDefaultSize,
+				wxTE_READONLY);
 
 			vb_frameList = new wxBoxSizer(wxVERTICAL);
 			p_frameList = new wxScrolled<wxPanel>(this);
@@ -176,12 +222,15 @@ class FrameAnalysisPanel : public wxPanel {
 			hb_top->AddStretchSpacer();
 			hb_top->Add(lbl_thresh, 0, wxALIGN_CENTER);
 			hb_top->Add(spn_thresh, 0);
-			hb_top->Add(chk_autoThresh, 0, wxALIGN_CENTER | wxLEFT, PAD_SML);
+			hb_top->AddSpacer(PAD_SML);
+			hb_top->Add(chk_autoThresh, 0, wxALIGN_CENTER);
 
 			layout->Add(lbl_frameCount, 0, wxEXPAND);
 			layout->Add(hb_top, 0, wxEXPAND);
 			layout->AddSpacer(PAD_MED);
 			layout->Add(p_frameList, 1, wxEXPAND);
+			layout->AddSpacer(PAD_MED);
+			layout->Add(te_flaggedFrames, 0, wxEXPAND);
 
 			layout_outer->Add(layout, 1, wxEXPAND | wxALL, PAD_MED);
 			SetSizer(layout_outer);
@@ -189,10 +238,12 @@ class FrameAnalysisPanel : public wxPanel {
 
 
 			// Connections
-			Bind(wxEVT_SPINCTRLDOUBLE, &FrameAnalysisPanel::OnThresholdChange, this, ID_SPN_THRESH);
-			Bind(wxEVT_TEXT, &FrameAnalysisPanel::OnThresholdChange, this, ID_SPN_THRESH);
-			Bind(wxEVT_CHECKBOX, &FrameAnalysisPanel::OnOnlyFlaggedChange, this, ID_CHK_ONLYFLAGGED);
-			Bind(wxEVT_CHECKBOX, &FrameAnalysisPanel::OnAutoThreshChange, this, ID_CHK_AUTOTHRESH);
+			Bind(wxEVT_SPINCTRLDOUBLE, FrameAnalysisPanel::OnThresholdChange, this, ID_SPN_THRESH);
+			Bind(wxEVT_TEXT, FrameAnalysisPanel::OnThresholdChange, this, ID_SPN_THRESH);
+			Bind(wxEVT_CHECKBOX, FrameAnalysisPanel::OnOnlyFlaggedChange, this, ID_CHK_ONLYFLAGGED);
+			Bind(wxEVT_CHECKBOX, FrameAnalysisPanel::OnAutoThreshChange, this, ID_CHK_AUTOTHRESH);
+			Bind(wxEVT_BUTTON, FrameAnalysisPanel::UpdateFlaggedFrameLabel, this, ID_BTN_FLAG_ERR);
+			Bind(wxEVT_BUTTON, FrameAnalysisPanel::UpdateFlaggedFrameLabel, this, ID_BTN_FLAG_OK);
 		}
 
 		void SetFrameGroup(FrameGroup *value) {
@@ -235,6 +286,7 @@ class FrameAnalysisPanel : public wxPanel {
 		wxSpinCtrlDouble *spn_thresh;
 		wxScrolled<wxPanel> *p_frameList;
 		wxBoxSizer *vb_frameList;
+		wxTextCtrl *te_flaggedFrames;
 		wxBitmap *bmp_temp;
 		
 		int frameCount = 0;
@@ -340,6 +392,7 @@ class FrameAnalysisPanel : public wxPanel {
 			
 			flaggedCount = flag_count;
 			UpdateCountLabel();
+			UpdateFlaggedFrameLabel();
 			HideUnflaggedFrames(hideUnflagged);
 		}
 
@@ -348,9 +401,10 @@ class FrameAnalysisPanel : public wxPanel {
 
 			if (state) {
 				for (int i = 0; i < frameCount; i++) {
-
 					auto frame = frameWidgets->at(i);
-					if (frame->IsFlagged()) {
+					
+					if (frame->IsFlagged()
+					||  frame->IsMarkedError() ) {
 						frame->Show();
 					} else {
 						frame->Hide();
@@ -400,6 +454,30 @@ class FrameAnalysisPanel : public wxPanel {
 			// Half of one standard deviation works fairly well
 			auto_thresh = stdev / mean_of_means / 2;
 			OnAutoThreshChange(false);
+		}
+
+		void UpdateFlaggedFrameLabel() {
+			std::string output = "";
+			for (int i = 0; i < frameCount; i++) {
+				auto widget = frameWidgets->at(i);
+
+				if (!widget->IsMarkedOK()
+				&& ( widget->IsFlagged() || widget->IsMarkedError() )) {
+					output.append(std::format("{}, ", widget->GetFrameNum()));
+				}
+			}
+
+			// Remove trailing ", "
+			output.resize(output.size() - 2);
+			te_flaggedFrames->SetLabel(output);
+		}
+
+
+		// Event handlers
+
+		// Wrapper for Binding to ui event
+		void UpdateFlaggedFrameLabel(wxCommandEvent &event) {
+			UpdateFlaggedFrameLabel();
 		}
 
 		void OnThresholdChange(wxCommandEvent &event) {
