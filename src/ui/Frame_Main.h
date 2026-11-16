@@ -49,11 +49,12 @@ class EncoreFrame : public wxFrame {
 
 		void OnLoadFrames(wxCommandEvent &event) {
 			auto framesToLoad = p_dirSelect->GetSelectedGroups();
+			auto downsampling = p_dirSelect->GetDownsamplingSelection();
 
 			// Protect against a failure to get FrameGroups
 			if (framesToLoad == nullptr) return;
 
-			p_frameAnalysis->SetFrameGroup((*framesToLoad)[0]);
+			p_frameAnalysis->SetFrameGroup((*framesToLoad)[0], downsampling);
 
 			SetSize(750, 500);
 			nb_main->SetSelection(1);

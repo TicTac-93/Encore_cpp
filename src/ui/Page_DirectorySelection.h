@@ -23,6 +23,17 @@ class DirSelectPanel : public wxPanel {
 
 			lbl_filelist = new wxStaticText(this, -1, "Select Frame Sequences to Analyze:");
 			lc_filelist = new FileListCtrl(this, ID_LC_FILES, *fileListArray);
+
+			lbl_downsampling = new wxStaticText(this, -1, "Processing Resolution");
+			wxString downsampling_choices[4] = {
+				"Full",
+				"1/2",
+				"1/4",
+				"1/8"
+			};
+			cbx_downsampling = new wxComboBox(this, ID_CBX_DOWNSAMPLE, "Processing Resolution",
+				wxDefaultPosition, wxDefaultSize, 4, downsampling_choices, wxCB_READONLY);
+			cbx_downsampling->SetSelection(2);
 			btn_load_frames = new wxButton(this, ID_BTN_LOAD, "Load Frames");
 			DisableLoadBtn();
 			HideFilelist();
@@ -46,7 +57,11 @@ class DirSelectPanel : public wxPanel {
 
 			auto *hbox_2 = new wxBoxSizer(wxHORIZONTAL);
 			hbox_2->AddStretchSpacer();
-			hbox_2->Add(btn_load_frames, 0, wxEXPAND);
+			hbox_2->Add(lbl_downsampling, 0, wxALIGN_CENTER_VERTICAL);
+			hbox_2->AddSpacer(PAD_SML);
+			hbox_2->Add(cbx_downsampling, 0);
+			hbox_2->AddSpacer(PAD_MED);
+			hbox_2->Add(btn_load_frames, 0);
 			layout->Add(hbox_2, 0, wxEXPAND);
 
 			layout_outer->Add(layout, 1, wxEXPAND | wxALL, PAD_MED);
@@ -57,6 +72,7 @@ class DirSelectPanel : public wxPanel {
 			Bind(wxEVT_BUTTON, &DirSelectPanel::OnBrowse, this, ID_BTN_DIR);
 			Bind(wxEVT_LIST_ITEM_SELECTED, &DirSelectPanel::OnFrameSelect, this, ID_LC_FILES);
 			Bind(wxEVT_LIST_ITEM_DESELECTED, &DirSelectPanel::OnFrameSelect, this, ID_LC_FILES);
+			Bind(wxEVT_COMBOBOX, &DirSelectPanel::OnDownsampleSelect, this, ID_CBX_DOWNSAMPLE);
 		}
 
 		/// @brief Collects and returns FrameGroup objects based on the user's current UI selection.
@@ -83,6 +99,10 @@ class DirSelectPanel : public wxPanel {
 			}
 		}
 
+		int GetDownsamplingSelection() {
+			return (1 + cbx_downsampling->GetSelection());
+		}
+
 	private:
 		wxStaticText *lbl_dir;
 		wxTextCtrl *field_dir;
@@ -91,6 +111,8 @@ class DirSelectPanel : public wxPanel {
 		FileListCtrl *lc_filelist;
 		wxArrayString *fileListArray = new wxArrayString();
 		std::vector<FrameGroup *> *frameGroups = new std::vector<FrameGroup *>();
+		wxStaticText *lbl_downsampling;
+		wxComboBox *cbx_downsampling;
 		wxButton *btn_load_frames;
 		wxColor *itemColorA = new wxColor("#ffffff");
 		wxColor *itemColorB = new wxColor("#bbbbbb");
@@ -98,6 +120,8 @@ class DirSelectPanel : public wxPanel {
 		void HideFilelist() {
 			lc_filelist->Hide();
 			lbl_filelist->Hide();
+			lbl_downsampling->Hide();
+			cbx_downsampling->Hide();
 			btn_load_frames->Hide();
 			this->Layout();
 		}
@@ -106,6 +130,8 @@ class DirSelectPanel : public wxPanel {
 			lc_filelist->Show();
 			lc_filelist->RefreshAfterUpdate();
 			lbl_filelist->Show();
+			lbl_downsampling->Show();
+			cbx_downsampling->Show();
 			btn_load_frames->Show();
 			this->Layout();
 		}
@@ -120,7 +146,7 @@ class DirSelectPanel : public wxPanel {
 			this->Layout();
 		}
 
-		void OnBrowse(wxCommandEvent& event) {
+		void OnBrowse(wxCommandEvent &event) {
 			wxDirDialog *browseDialog = new wxDirDialog(this, "Select directory to scan...",
 				field_dir->GetValue(), wxDD_DIR_MUST_EXIST | wxDD_CHANGE_DIR);
 
@@ -147,13 +173,17 @@ class DirSelectPanel : public wxPanel {
 			}
 		}
 
-		void OnFrameSelect(wxCommandEvent& event) {
+		void OnFrameSelect(wxCommandEvent &event) {
 			if (lc_filelist->GetSelectedItemCount() > 0) {
 				EnableLoadBtn();
 			}
 			else {
 				DisableLoadBtn();
 			}
+		}
+
+		void OnDownsampleSelect(wxCommandEvent &event) {
+			// Reserved in case we need to handle anything
 		}
 
 };

@@ -13,9 +13,77 @@
 #include "../internal/ImageImporter.h"
 #include "../EncoreEnums.h"
 
-#include <chrono>
+// #include <chrono>
 
 using namespace encore;
+
+class ThumbnailViewer : public wxDialog {
+	public:
+		ThumbnailViewer(wxWindow *parent, int w_id, wxBitmap *bitmap, wxString title = "")
+			: wxDialog(
+				parent, w_id, title, wxDefaultPosition, wxDefaultSize,
+				wxRESIZE_BORDER | wxCAPTION | wxCLOSE_BOX | wxMAXIMIZE_BOX)
+		{
+			aspect = ((float)bitmap->GetWidth() / (float)bitmap->GetHeight());
+
+			// Set window sizing, accounting for padding and styling
+			auto bitmap_size = bitmap->GetSize();
+			auto dialog_size = wxGetDisplaySize();
+			dialog_size *= 0.75f;
+			if (dialog_size.GetWidth() > bitmap_size.GetWidth()) {
+				dialog_size = bitmap_size;
+			}
+			// SetMaxSize(bitmap_size + window_padding);
+			SetSize(dialog_size + window_padding);
+			
+			// Construction
+			// SetBackgroundColour(wxColor("#3b3b3b"));
+			bmp_display = new wxGenericStaticBitmap(this, -1, *bitmap);
+			bmp_display->SetMaxSize(bitmap->GetSize());
+			bmp_display->SetScaleMode(wxStaticBitmap::ScaleMode::Scale_AspectFit);
+
+			// Layout
+			auto *layout = new wxBoxSizer(wxVERTICAL);
+			layout->Add(bmp_display, 0, wxEXPAND | wxALL, PAD_MED);
+
+			SetSizer(layout);
+			Layout();
+			// layout->Fit(this);
+
+			// Connections
+			Bind(wxEVT_SIZE, ThumbnailViewer::OnResize, this);
+		}
+
+	private:
+		wxSize window_padding = wxSize(PAD_MED * 2, PAD_MED * 2 + wxSystemSettings::GetMetric(wxSYS_CAPTION_Y));
+		float aspect = 0.f;
+
+		wxGenericStaticBitmap *bmp_display;  // We will NOT own the bitmap being displayed
+		                                     // Be careful not to delete it
+
+
+		void OnResize(wxSizeEvent &event) {
+			Layout();
+			Refresh();
+		}
+};
+
+class ClickableStaticBitmap : public wxGenericStaticBitmap {
+	public:
+		ClickableStaticBitmap(wxWindow *parent, int w_id, wxBitmap bitmap, wxSize image_size)
+			: wxGenericStaticBitmap(parent, w_id, bitmap, wxDefaultPosition, image_size) 
+		{
+			// We only need to add a handler for mouse events, and then propogate them up
+			Bind(wxEVT_LEFT_UP, ClickableStaticBitmap::OnMouseClick, this, -1);
+		}
+
+	private:
+		void OnMouseClick(wxMouseEvent &event) {
+			auto *btn_event = new wxCommandEvent(wxEVT_BUTTON, GetId());
+
+			ProcessEvent(*btn_event);
+		}
+};
 
 class FrameWidget : public wxPanel {
 	public:
@@ -28,9 +96,6 @@ class FrameWidget : public wxPanel {
 			p_status = new wxPanel(this, -1, wxDefaultPosition, wxSize(PAD_MED, -1));
 			p_status->SetBackgroundColour(wxColor("#6ebe63"));
 			lbl_frameNum = new wxStaticText(this, -1, "###");
-			bmp_last = prev_frame;
-			bmp_current = this_frame;
-			bmp_next = next_frame;
 			btn_markError = new wxButton(this, ID_BTN_FLAG_ERR, "Mark Error");
 			btn_markError->SetHelpText("Mark this frame as an error, so it will be included in the frame list regardless of the current filter.");
 			btn_markOK = new wxButton(this, ID_BTN_FLAG_OK, "Mark OK");
@@ -38,11 +103,15 @@ class FrameWidget : public wxPanel {
 			lbl_filename = new wxStaticText(this, -1, "###");
 			lbl_statA = new wxStaticText(this, -1, "XXX", wxDefaultPosition, wxDefaultSize, wxTEXT_ALIGNMENT_RIGHT);
 			lbl_statB = new wxStaticText(this, -1, "XXX");
+			
+			bmp_last = prev_frame;
+			bmp_current = this_frame;
+			bmp_next = next_frame;
 
 			auto imageSize = wxSize(100, 56);
-			p_last = new wxGenericStaticBitmap(this, ID_IMG_LAST, *prev_frame, wxDefaultPosition, imageSize);
-			p_current = new wxGenericStaticBitmap(this, ID_IMG_THIS, *this_frame, wxDefaultPosition, imageSize);
-			p_next = new wxGenericStaticBitmap(this, ID_IMG_NEXT, *next_frame, wxDefaultPosition, imageSize);
+			p_last = new ClickableStaticBitmap(this, ID_IMG_LAST, *prev_frame, imageSize);
+			p_current = new ClickableStaticBitmap(this, ID_IMG_THIS, *this_frame, imageSize);
+			p_next = new ClickableStaticBitmap(this, ID_IMG_NEXT, *next_frame, imageSize);
 			p_last->SetScaleMode(wxStaticBitmap::ScaleMode::Scale_AspectFill);
 			p_current->SetScaleMode(wxStaticBitmap::ScaleMode::Scale_AspectFill);
 			p_next->SetScaleMode(wxStaticBitmap::ScaleMode::Scale_AspectFill);
@@ -86,6 +155,7 @@ class FrameWidget : public wxPanel {
 			// Connections
 			Bind(wxEVT_BUTTON, FrameWidget::OnMarkedError, this, ID_BTN_FLAG_ERR);
 			Bind(wxEVT_BUTTON, FrameWidget::OnMarkedOK, this, ID_BTN_FLAG_OK);
+			Bind(wxEVT_BUTTON, FrameWidget::OnClickedThumbnail, this);
 		}
 
 		void SetFrameNum(int number, int padding=4) {
@@ -137,7 +207,7 @@ class FrameWidget : public wxPanel {
 		bool _isMarkedOK = false; // Manually set by user, overrides flagging
 
 		wxPanel *p_status;
-		wxGenericStaticBitmap *p_last, *p_current, *p_next;
+		ClickableStaticBitmap *p_last, *p_current, *p_next;
 		wxStaticText *lbl_frameNum;
 		wxBitmap *bmp_current, *bmp_last, *bmp_next;  // These should reference a central array of bitmaps, NOT new objs!
 		wxButton *btn_markError;
@@ -181,6 +251,35 @@ class FrameWidget : public wxPanel {
 			UpdateStatusBar();
 			event.Skip();
 		}
+
+		void OnClickedThumbnail(wxCommandEvent &event) {
+			// FIXME: Not making it here, may need to customize staticbitmap class to implement mouse events
+			int id = event.GetId();
+			wxString title = lbl_filename->GetLabelText();
+			wxBitmap *bitmap;
+			switch (id) {
+				case (ID_IMG_LAST):
+					bitmap = bmp_last;
+					title.append(" - PREV");
+					break;
+
+				case (ID_IMG_THIS):
+					bitmap = bmp_current;
+					break;
+
+				case (ID_IMG_NEXT):
+					bitmap = bmp_next;
+					title.append(" - NEXT");
+					break;
+
+				default:
+					return;
+			}
+
+			auto *img_dialog = new ThumbnailViewer(this, -1, bitmap, title);
+			img_dialog->Show();
+		}
+
 };
 
 class FrameAnalysisPanel : public wxPanel {
@@ -246,7 +345,7 @@ class FrameAnalysisPanel : public wxPanel {
 			Bind(wxEVT_BUTTON, FrameAnalysisPanel::UpdateFlaggedFrameLabel, this, ID_BTN_FLAG_OK);
 		}
 
-		void SetFrameGroup(FrameGroup *value) {
+		void SetFrameGroup(FrameGroup *value, int downsampling) {
 			frameGroup = value;
 			SetFrameCount(frameGroup->GetCount());
 			framePadding = std::to_string(frameCount).length();
@@ -256,7 +355,7 @@ class FrameAnalysisPanel : public wxPanel {
 				wxPD_APP_MODAL);
 
 			// Load images in the group
-			LoadAndAnalyzeGroup(*frameGroup, *frameData, 4, &prog_dialog);
+			LoadAndAnalyzeGroup(*frameGroup, *frameData, downsampling, &prog_dialog);
 
 			p_frameList->Freeze();
 			for (int i = 0; i < frameCount; i++) {
@@ -266,7 +365,7 @@ class FrameAnalysisPanel : public wxPanel {
 				auto tgtFrameData = frameData->at(i);
 				auto newFrame = AddFrame(tgtFramePath->GetIndex());
 				// Style frame widget
-				newFrame->SetName(tgtFramePath->GetFilepath().stem().string());
+				newFrame->SetName(tgtFramePath->GetFilepath().filename().string());
 				newFrame->SetStatLabels(tgtFrameData->a_mean, tgtFrameData->b_mean);
 			}
 
@@ -423,6 +522,10 @@ class FrameAnalysisPanel : public wxPanel {
 
 		void UpdateAutoThresh() {
 			// Update the threshold based on the standard deviation of diff values
+
+			// TODO: Detect outlier values and attempt to cull them from the dataset
+			// The idea is to guard against one or two outsized glitches "hiding" many
+			// normal ones in the auto-filter, or pegging the threshold at 100%
 
 
 			// Get total mean
