@@ -107,23 +107,25 @@ class FrameWidget : public wxPanel {
 			bmp_last = prev_frame;
 			bmp_current = this_frame;
 			bmp_next = next_frame;
+			_frameAspect = (float)bmp_current->GetWidth() / (float)bmp_current->GetHeight();
+			_imageSize = wxSize((int)(_frameAspect * 50), 50);
 
-			auto imageSize = wxSize(100, 56);
-			p_last = new ClickableStaticBitmap(this, ID_IMG_LAST, *prev_frame, imageSize);
-			p_current = new ClickableStaticBitmap(this, ID_IMG_THIS, *this_frame, imageSize);
-			p_next = new ClickableStaticBitmap(this, ID_IMG_NEXT, *next_frame, imageSize);
-			p_last->SetScaleMode(wxStaticBitmap::ScaleMode::Scale_AspectFill);
-			p_current->SetScaleMode(wxStaticBitmap::ScaleMode::Scale_AspectFill);
-			p_next->SetScaleMode(wxStaticBitmap::ScaleMode::Scale_AspectFill);
+			thmb_last = new ClickableStaticBitmap(this, ID_IMG_LAST, *prev_frame, _imageSize);
+			thmb_current = new ClickableStaticBitmap(this, ID_IMG_THIS, *this_frame, _imageSize);
+			thmb_next = new ClickableStaticBitmap(this, ID_IMG_NEXT, *next_frame, _imageSize);
+			thmb_last->SetScaleMode(wxStaticBitmap::ScaleMode::Scale_AspectFill);
+			thmb_current->SetScaleMode(wxStaticBitmap::ScaleMode::Scale_AspectFill);
+			thmb_next->SetScaleMode(wxStaticBitmap::ScaleMode::Scale_AspectFill);
 			SetBackgroundColour(wxColor("#eeeeee"));
+
 			
 			// Layout
 			auto *layout = new wxBoxSizer(wxHORIZONTAL);
-			layout->Add(p_last, 0, wxEXPAND);
+			layout->Add(thmb_last, 0, wxEXPAND);
 			layout->Add(lbl_last, 0, wxALIGN_CENTER | wxALL, PAD_SML);
-			layout->Add(p_current, 0, wxEXPAND);
+			layout->Add(thmb_current, 0, wxEXPAND);
 			layout->Add(lbl_next, 0, wxALIGN_CENTER | wxALL, PAD_SML);
-			layout->Add(p_next, 0, wxEXPAND);
+			layout->Add(thmb_next, 0, wxEXPAND);
 
 			auto *vbox_1 = new wxBoxSizer(wxVERTICAL);
 			vbox_1->Add(btn_markOK, 1, wxEXPAND);
@@ -155,7 +157,9 @@ class FrameWidget : public wxPanel {
 			// Connections
 			Bind(wxEVT_BUTTON, FrameWidget::OnMarkedError, this, ID_BTN_FLAG_ERR);
 			Bind(wxEVT_BUTTON, FrameWidget::OnMarkedOK, this, ID_BTN_FLAG_OK);
-			Bind(wxEVT_BUTTON, FrameWidget::OnClickedThumbnail, this);
+			Bind(wxEVT_BUTTON, FrameWidget::OnClickedThumbnail, this, ID_IMG_LAST);
+			Bind(wxEVT_BUTTON, FrameWidget::OnClickedThumbnail, this, ID_IMG_THIS);
+			Bind(wxEVT_BUTTON, FrameWidget::OnClickedThumbnail, this, ID_IMG_NEXT);
 		}
 
 		void SetFrameNum(int number, int padding=4) {
@@ -186,6 +190,21 @@ class FrameWidget : public wxPanel {
 			UpdateStatusBar();
 		}
 
+		void SetThumbSize(int value) {
+			// Input value will be range 0-100
+			// Remap it and apply to our base _imageSize
+			float scale = (value * 0.05f) + 1;
+			auto scaled_size = _imageSize * scale;
+			
+			thmb_last->SetMinSize(scaled_size);
+			thmb_current->SetMinSize(scaled_size);
+			thmb_next->SetMinSize(scaled_size);
+
+			Fit();
+			Refresh();
+			// Update();
+		}
+
 		bool IsFlagged() {
 			return _isFlagged;
 		}
@@ -200,6 +219,8 @@ class FrameWidget : public wxPanel {
 
 	private:
 		int _frameNum = -1;
+		float _frameAspect = 1.f;
+		wxSize _imageSize;
 		float _diffLast = 0.f;
 		float _diffNext = 0.f;
 		bool _isFlagged = false; // Set by the flagging algorithm and threshold
@@ -207,7 +228,7 @@ class FrameWidget : public wxPanel {
 		bool _isMarkedOK = false; // Manually set by user, overrides flagging
 
 		wxPanel *p_status;
-		ClickableStaticBitmap *p_last, *p_current, *p_next;
+		ClickableStaticBitmap *thmb_last, *thmb_current, *thmb_next;
 		wxStaticText *lbl_frameNum;
 		wxBitmap *bmp_current, *bmp_last, *bmp_next;  // These should reference a central array of bitmaps, NOT new objs!
 		wxButton *btn_markError;
@@ -253,10 +274,11 @@ class FrameWidget : public wxPanel {
 		}
 
 		void OnClickedThumbnail(wxCommandEvent &event) {
-			// FIXME: Not making it here, may need to customize staticbitmap class to implement mouse events
 			int id = event.GetId();
 			wxString title = lbl_filename->GetLabelText();
 			wxBitmap *bitmap;
+
+			// We're handling multiple events here, so do some filtering
 			switch (id) {
 				case (ID_IMG_LAST):
 					bitmap = bmp_last;
@@ -273,6 +295,7 @@ class FrameWidget : public wxPanel {
 					break;
 
 				default:
+					event.Skip();
 					return;
 			}
 
@@ -292,6 +315,9 @@ class FrameAnalysisPanel : public wxPanel {
 			chk_showOnlyFlagged = new wxCheckBox(this, ID_CHK_ONLYFLAGGED,
 				wxT("Only show Flagged frames"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
 			chk_showOnlyFlagged->SetValue(hideUnflagged);
+			lbl_thumbSlider = new wxStaticText(this, -1, "Thumbnail Size");
+			sld_thumbnailSize = new wxSlider(this, ID_SLD_THUMBSIZE, 0, 0, 5,
+				wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
 			lbl_thresh = new wxStaticText(this, -1, "Filter Threshold:");
 			spn_thresh = new wxSpinCtrlDouble(this, ID_SPN_THRESH, wxEmptyString,
 				wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT || wxTE_PROCESS_ENTER,
@@ -319,6 +345,9 @@ class FrameAnalysisPanel : public wxPanel {
 			auto *hb_top = new wxBoxSizer(wxHORIZONTAL);
 			hb_top->Add(chk_showOnlyFlagged, 0, wxALIGN_CENTER);
 			hb_top->AddStretchSpacer();
+			hb_top->Add(lbl_thumbSlider, 0, wxALIGN_CENTER);
+			hb_top->Add(sld_thumbnailSize, 0);
+			hb_top->AddStretchSpacer();
 			hb_top->Add(lbl_thresh, 0, wxALIGN_CENTER);
 			hb_top->Add(spn_thresh, 0);
 			hb_top->AddSpacer(PAD_SML);
@@ -343,6 +372,7 @@ class FrameAnalysisPanel : public wxPanel {
 			Bind(wxEVT_CHECKBOX, FrameAnalysisPanel::OnAutoThreshChange, this, ID_CHK_AUTOTHRESH);
 			Bind(wxEVT_BUTTON, FrameAnalysisPanel::UpdateFlaggedFrameLabel, this, ID_BTN_FLAG_ERR);
 			Bind(wxEVT_BUTTON, FrameAnalysisPanel::UpdateFlaggedFrameLabel, this, ID_BTN_FLAG_OK);
+			Bind(wxEVT_SLIDER, FrameAnalysisPanel::OnThumbSizeChange, this, ID_SLD_THUMBSIZE);
 		}
 
 		void SetFrameGroup(FrameGroup *value, int downsampling) {
@@ -380,6 +410,8 @@ class FrameAnalysisPanel : public wxPanel {
 	private:
 		wxStaticText *lbl_frameCount;
 		wxCheckBox *chk_showOnlyFlagged;
+		wxStaticText *lbl_thumbSlider;
+		wxSlider *sld_thumbnailSize;
 		wxStaticText *lbl_thresh;
 		wxCheckBox *chk_autoThresh;
 		wxSpinCtrlDouble *spn_thresh;
@@ -612,4 +644,14 @@ class FrameAnalysisPanel : public wxPanel {
 			OnAutoThreshChange();
 		}
 
+		void OnThumbSizeChange(wxCommandEvent &event) {
+			int slider_val = sld_thumbnailSize->GetValue() * 20;
+
+			for (int i = 0; i < frameCount; i++) {
+				frameWidgets->at(i)->SetThumbSize(slider_val);
+			}
+			p_frameList->FitInside();
+			p_frameList->Refresh();
+		}
+		
 };
