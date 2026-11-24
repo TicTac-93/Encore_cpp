@@ -54,6 +54,14 @@ class ThumbnailViewer : public wxDialog {
 			Bind(wxEVT_SIZE, ThumbnailViewer::OnResize, this);
 		}
 
+		~ThumbnailViewer() {
+			// No need for cleanup, all elements should be cleaned up by wxWidgets
+		}
+
+		int OnClose() {
+			Destroy();
+		}
+
 	private:
 		wxSize window_padding = wxSize(PAD_MED * 2, PAD_MED * 2 + wxSystemSettings::GetMetric(wxSYS_CAPTION_Y));
 		float aspect = 0.f;
@@ -133,7 +141,7 @@ class FrameWidget : public wxPanel {
 			vbox_1->Add(btn_markError, 1, wxEXPAND);
 
 			layout->AddSpacer(PAD_MED);
-			layout->Add(vbox_1, 1, wxEXPAND);
+			layout->Add(vbox_1, 0, wxEXPAND);
 
 			auto *vbox_2 = new wxBoxSizer(wxVERTICAL);
 			vbox_2->Add(lbl_filename, 0, wxEXPAND);
@@ -375,6 +383,17 @@ class FrameAnalysisPanel : public wxPanel {
 			Bind(wxEVT_SLIDER, FrameAnalysisPanel::OnThumbSizeChange, this, ID_SLD_THUMBSIZE);
 		}
 
+		~FrameAnalysisPanel() {
+			delete bmp_temp;
+			
+			// Clear the contents of the frameData vector
+			for (int i = 0; i < frameCount; i++) {
+				delete frameData->at(i);
+			}
+			delete frameData;
+			delete frameGroup;
+		}
+
 		void SetFrameGroup(FrameGroup *value, int downsampling) {
 			frameGroup = value;
 			SetFrameCount(frameGroup->GetCount());
@@ -402,6 +421,9 @@ class FrameAnalysisPanel : public wxPanel {
 			// Flag images using analysis data and current threshold
 			UpdateAutoThresh();
 			UpdateFrameFlags();
+
+			prog_dialog.Close();
+			prog_dialog.Destroy();
 
 			Layout();
 			p_frameList->Thaw();
@@ -439,7 +461,6 @@ class FrameAnalysisPanel : public wxPanel {
 
 		void SetFrameCount(int count) {
 			frameCount = count;
-			UpdateCountLabel();
 
 			// Widgets
 			p_frameList->DestroyChildren();
@@ -593,18 +614,23 @@ class FrameAnalysisPanel : public wxPanel {
 
 		void UpdateFlaggedFrameLabel() {
 			std::string output = "";
+			int count = 0;
 			for (int i = 0; i < frameCount; i++) {
 				auto widget = frameWidgets->at(i);
 
 				if (!widget->IsMarkedOK()
 				&& ( widget->IsFlagged() || widget->IsMarkedError() )) {
 					output.append(std::format("{}, ", widget->GetFrameNum()));
+					count ++;
 				}
 			}
 
 			// Remove trailing ", "
 			output.resize(output.size() - 2);
 			te_flaggedFrames->SetLabel(output);
+			
+			flaggedCount = count;
+			UpdateCountLabel();
 		}
 
 

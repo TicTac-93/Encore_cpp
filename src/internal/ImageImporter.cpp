@@ -91,7 +91,7 @@ Rgb& ImageData::Pixel(int x, int y) {
 
 wxBitmap* ImageData::CreateBitmap(float gamma) {
 	int output_size = (sizeof(unsigned char) * _w * _h * 3);
-	unsigned char *output_data = (unsigned char*)malloc(output_size);
+	unsigned char *output_data = (unsigned char*)malloc(output_size); // Will be owned by the wxImage
 	long int offset = 0;
 	int incr = sizeof(unsigned char);
 
@@ -284,6 +284,19 @@ int encore::LoadAndAnalyzeGroup(
 			analysis_threads[i]->join();
 		}
 		clear_threads[i]->join();
+	}
+
+	// Memory cleanup
+	delete loaded_count;
+	delete mtx_imgdata;
+	delete mtx_loaded_counter;
+	for (int i = 0; i < frame_count; i++) {
+		delete loading_threads[i];
+		delete clear_threads[i];
+		delete mtx_start[i];
+		if (analysis_threads[i] != nullptr) {
+			delete analysis_threads[i];
+		}
 	}
 
 	return 0;

@@ -30,5 +30,5 @@ class FileListCtrl : public wxListCtrl {
 
 
 	private:
-		wxArrayString *itemList;
+		wxArrayString *itemList; // We do not own this, it's up to the parent frame to manage
 };

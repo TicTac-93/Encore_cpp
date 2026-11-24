@@ -75,6 +75,16 @@ class DirSelectPanel : public wxPanel {
 			Bind(wxEVT_COMBOBOX, &DirSelectPanel::OnDownsampleSelect, this, ID_CBX_DOWNSAMPLE);
 		}
 
+		~DirSelectPanel() {
+			// This panel won't be destroyed until the program closes,
+			// so we really don't need to do anything here.
+			// But we'll clean some stuff up anyway.
+
+			delete fileListArray;
+			delete itemColorA;
+			delete itemColorB;
+		}
+
 		/// @brief Collects and returns FrameGroup objects based on the user's current UI selection.
 		/// @return A pointer to a vector of FrameGroups, or nullptr if nothing was selected.
 		std::vector<FrameGroup *>* GetSelectedGroups() {
@@ -110,10 +120,11 @@ class DirSelectPanel : public wxPanel {
 		wxStaticText *lbl_filelist;
 		FileListCtrl *lc_filelist;
 		wxArrayString *fileListArray = new wxArrayString();
-		std::vector<FrameGroup *> *frameGroups = new std::vector<FrameGroup *>();
 		wxStaticText *lbl_downsampling;
 		wxComboBox *cbx_downsampling;
 		wxButton *btn_load_frames;
+		
+		std::vector<FrameGroup *> *frameGroups = new std::vector<FrameGroup *>();
 		wxColor *itemColorA = new wxColor("#ffffff");
 		wxColor *itemColorB = new wxColor("#bbbbbb");
 
@@ -171,6 +182,7 @@ class DirSelectPanel : public wxPanel {
 
 				}
 			}
+			browseDialog->Destroy();
 		}
 
 		void OnFrameSelect(wxCommandEvent &event) {

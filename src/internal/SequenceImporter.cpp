@@ -8,18 +8,18 @@ using namespace Imath;
 // ============================================================================
 // CLASS FramePath
 
-FramePath::FramePath(path *frame) {
+FramePath::FramePath(path frame) {
 	filepath = frame;
 	// TODO: UTF(8?) support
-	filename = new std::string(filepath->stem().string());
-	filetype = new std::string(filepath->extension().string());
+	filename = std::string(filepath.stem().string());
+	filetype = std::string(filepath.extension().string());
 
 	// Extract frame index from filename
 	// For now, we only support trailing frame numbers
 	std::string index_str = "";
 	bool cont = true;
-	for (int i = filename->length() - 1; cont && i >= 0; i--) {
-		char character = filename->at(i);
+	for (int i = filename.length() - 1; cont && i >= 0; i--) {
+		char character = filename.at(i);
 		if (isdigit(character)) {
 			// Remember, we're reading this right-to-left
 			index_str = character + index_str;
@@ -27,32 +27,32 @@ FramePath::FramePath(path *frame) {
 		else {
 			cont = false;
 			// Update filename with numbers removed
-			*filename = filename->substr(0, i+1);
+			filename = filename.substr(0, i+1);
 		}
 	}
 
 	if (index_str.length() > 0) {
-		index = new int(std::stoi(index_str));
+		index = std::stoi(index_str);
 	}
 	else {
-		index = new int(-1);
+		index = -1;
 	}
 }
 
 path FramePath::GetFilepath() {
-	return *filepath;
+	return filepath;
 }
 
 std::string FramePath::GetName() {
-	return *filename;
+	return filename;
 }
 
 std::string FramePath::GetType() {
-	return *filetype;
+	return filetype;
 }
 
 int FramePath::GetIndex() {
-	return *index;
+	return index;
 }
 
 
@@ -60,75 +60,75 @@ int FramePath::GetIndex() {
 // CLASS FrameGroup
 
 FrameGroup::FrameGroup() {
-	frames = new std::vector<FramePath *>();
-	filename = new std::string();
-	filetype = new std::string();
-	index_min = new int(0);
-	index_max = new int(0);
-	count = new int(0);
+	frames = std::vector<FramePath *>();
+	filename = "";
+	filetype = "";
+	index_min = 0;
+	index_max = 0;
+	count = 0;
 }
 
 FrameGroup::FrameGroup(FramePath *frame) {
-	frames = new std::vector<FramePath *>();
-	frames->push_back(frame);
-	filename = new std::string(frame->GetName());
-	filetype = new std::string(frame->GetType());
-	index_min = new int(frame->GetIndex());
-	index_max = new int(*index_min);
-	count = new int(1);
+	frames = std::vector<FramePath *>();
+	frames.push_back(frame);
+	filename = frame->GetName();
+	filetype = frame->GetType();
+	index_min = frame->GetIndex();
+	index_max = index_min;
+	count = 1;
 }
 
 void FrameGroup::AddFrame(FramePath *frame) {
-	frames->push_back(frame);
-	(*count) ++;
+	frames.push_back(frame);
+	count ++;
 	int new_index = frame->GetIndex();
-	if (new_index < *index_min) {
-		*index_min = new_index;
+	if (new_index < index_min) {
+		index_min = new_index;
 	}
-	else if (new_index > *index_max) {
-		*index_max = new_index;
+	else if (new_index > index_max) {
+		index_max = new_index;
 	}
 }
 
 int FrameGroup::GetMin() {
-	return *index_min;
+	return index_min;
 }
 
 void FrameGroup::SetMin(int value) {
-	*index_min = value;
+	index_min = value;
 }
 
 int FrameGroup::GetMax() {
-	return *index_max;
+	return index_max;
 }
 
 void FrameGroup::SetMax(int value) {
-	*index_max = value;
+	index_max = value;
 }
 
 int FrameGroup::GetCount() {
-	return *count;
+	return count;
 }
 
 std::string FrameGroup::GetFiletype() {
-	return *filetype;
+	return filetype;
 }
 
 void FrameGroup::SetFiletype(std::string value) {
-	*filetype = value;
+	filetype = value;
 }
 
 std::string FrameGroup::GetFilename() {
-	return *filename;
+	return filename;
 }
 
 void FrameGroup::SetFilename(std::string value) {
-	*filename = value;
+	filename = value;
 }
 
 FramePath* FrameGroup::GetFrameAt(int index) {
-	if (index >= 0 && index < frames->size()) {
-		return frames->at(index);
+	if (index >= 0 && index < frames.size()) {
+		return frames.at(index);
 	}
 	else {
 		return nullptr;
@@ -156,10 +156,10 @@ std::vector<FrameGroup *>* encore::GroupFrameSequences(wxArrayString *filesArray
 	auto groups = new std::vector<FrameGroup *>();
 	for (int i = 0; i < filesArray->GetCount(); i++) {
 		bool found_group = false;
-		path *filepath = new path(filesArray->Item(i).ToStdString());
+		path filepath = path(filesArray->Item(i).ToStdString());
 
 		// Skip unsupported file formats
-		if (filepath->extension() != ".exr") {
+		if (filepath.extension() != ".exr") {
 			continue;
 		}
 

@@ -13,7 +13,7 @@ namespace encore {
 /// @brief A class for storing a path to a single frame, with pre-processed metadata.
 class FramePath {
 	public:
-		FramePath(path *frame);
+		FramePath(path frame);
 
 		/// @brief Returns the full filepath to this frame
 		path GetFilepath();
@@ -28,10 +28,10 @@ class FramePath {
 		int GetIndex();
 
 	private:
-		path *filepath;  // The full path to this frame, on disk
-		std::string *filename;  // The filename, without trailing numbers or extension
-		std::string *filetype;  // The file's extension
-		int *index;  // The frame number extracted from the filename
+		path filepath;  // The full path to this frame, on disk
+		std::string filename;  // The filename, without trailing numbers or extension
+		std::string filetype;  // The file's extension
+		int index;  // The frame number extracted from the filename
 };
 
 /// @brief A group of frames in a sequence, though not necessarily in order.
@@ -78,9 +78,9 @@ class FrameGroup {
 		FramePath* GetFrameAt(int index);
 
 	private:
-		std::vector<FramePath *> *frames;
-		std::string *filename, *filetype;
-		int *index_min, *index_max, *count;
+		std::vector<FramePath *> frames;
+		std::string filename, filetype;
+		int index_min, index_max, count;
 };
 
 /// @brief Uses wxWidgets to fetch all files in a given directory, writing them to the filesArray.
@@ -92,7 +92,7 @@ int GetFilesInDir(wxString path, wxArrayString *filesArray);
 /// @brief Converts an array of string paths to FramePaths, grouping them by name
 ///        and returning a vector of all groups.
 /// @param filesArray 
-/// @return 
+/// @return A vector of FrameSequences, owned by the caller
 std::vector<FrameGroup *>* GroupFrameSequences(wxArrayString *filesArray);
 
 }
