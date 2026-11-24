@@ -109,6 +109,8 @@ class DirSelectPanel : public wxPanel {
 			}
 		}
 
+		/// @brief Gets the value of the Downsampling dropdown menu and formats it
+		///        to work with the image-loading functions.
 		int GetDownsamplingSelection() {
 			return (1 + cbx_downsampling->GetSelection());
 		}
@@ -128,6 +130,7 @@ class DirSelectPanel : public wxPanel {
 		wxColor *itemColorA = new wxColor("#ffffff");
 		wxColor *itemColorB = new wxColor("#bbbbbb");
 
+		/// @brief Hides the filelist and associated widgets.
 		void HideFilelist() {
 			lc_filelist->Hide();
 			lbl_filelist->Hide();
@@ -137,6 +140,7 @@ class DirSelectPanel : public wxPanel {
 			this->Layout();
 		}
 
+		/// @brief Shows the filelist and associated widgets.
 		void ShowFilelist() {
 			lc_filelist->Show();
 			lc_filelist->RefreshAfterUpdate();
@@ -147,16 +151,23 @@ class DirSelectPanel : public wxPanel {
 			this->Layout();
 		}
 
+		/// @brief Disables the "Load Frames" button
 		void DisableLoadBtn() {
 			btn_load_frames->Disable();
-			this->Layout();
+			// this->Layout();
 		}
 
+		/// @brief Enables the "Load Frames" button
 		void EnableLoadBtn() {
 			btn_load_frames->Enable();
-			this->Layout();
+			// this->Layout();
 		}
 
+		/// @brief Handler for the "Browse Directories" button.
+		///
+		///        Creates a native filebrowsing dialog and when continued by the user
+		///        collects info on all the files within, grouping them based on filename.
+		/// @param event 
 		void OnBrowse(wxCommandEvent &event) {
 			wxDirDialog *browseDialog = new wxDirDialog(this, "Select directory to scan...",
 				field_dir->GetValue(), wxDD_DIR_MUST_EXIST | wxDD_CHANGE_DIR);
@@ -185,6 +196,7 @@ class DirSelectPanel : public wxPanel {
 			browseDialog->Destroy();
 		}
 
+		/// @brief Handler for the user selecting entries in the filelist.
 		void OnFrameSelect(wxCommandEvent &event) {
 			if (lc_filelist->GetSelectedItemCount() > 0) {
 				EnableLoadBtn();
@@ -194,6 +206,7 @@ class DirSelectPanel : public wxPanel {
 			}
 		}
 
+		/// @brief Handler for the Downsampling dropdown menu.
 		void OnDownsampleSelect(wxCommandEvent &event) {
 			// Reserved in case we need to handle anything
 		}

@@ -17,8 +17,14 @@
 
 using namespace encore;
 
+/// @brief A Dialog window to display a wxBitmap
 class ThumbnailViewer : public wxDialog {
 	public:
+		/// @brief A Dialog window displaying the given bitmap, initialized to fit within the window.
+		/// @param parent The parent window used for wxWidgets
+		/// @param w_id ID to assign this window (not currently used)
+		/// @param bitmap The wxBitmap to display
+		/// @param title Text to display in the main window bar
 		ThumbnailViewer(wxWindow *parent, int w_id, wxBitmap *bitmap, wxString title = "")
 			: wxDialog(
 				parent, w_id, title, wxDefaultPosition, wxDefaultSize,
@@ -58,7 +64,7 @@ class ThumbnailViewer : public wxDialog {
 			// No need for cleanup, all elements should be cleaned up by wxWidgets
 		}
 
-		int OnClose() {
+		void OnClose() {
 			Destroy();
 		}
 
@@ -76,8 +82,14 @@ class ThumbnailViewer : public wxDialog {
 		}
 };
 
+/// @brief A wxGenericStaticBitmap extended with a mouse-click handler that will propogate up the heirarchy.
 class ClickableStaticBitmap : public wxGenericStaticBitmap {
 	public:
+		/// @brief A wxGenericStaticBitmap that generates a wxEVT_BUTTON on left-click.
+		/// @param parent The parent window used by wxWidgets
+		/// @param w_id The ID for wxWidgets events
+		/// @param bitmap The wxBitmap to display
+		/// @param image_size The size to initialize the StaticBitmap with
 		ClickableStaticBitmap(wxWindow *parent, int w_id, wxBitmap bitmap, wxSize image_size)
 			: wxGenericStaticBitmap(parent, w_id, bitmap, wxDefaultPosition, image_size) 
 		{
@@ -93,10 +105,19 @@ class ClickableStaticBitmap : public wxGenericStaticBitmap {
 		}
 };
 
+/// @brief A custom wxPanel-based widget for displaying a frame, its neighbors, and some stats.
 class FrameWidget : public wxPanel {
 	public:
-		FrameWidget() = default;
+		// FrameWidget() = default;
 
+		/// @brief A wxPanel that displays thumbnails for a frame and its neighbors, some stats, and buttons for manually flagging.
+		///        The buttons generate wxEVT_BUTTON events with the id ID_BTN_FLAG_ERR and ID_BTN_FLAG_OK, propogated up from here.
+		///        The frame thumbnails are clickable, and expand into dialog windows for inspection.
+		/// @param parent The parent used by wxWidgets
+		/// @param w_id The ID to assign this widget
+		/// @param prev_frame The bitmap to be displayed in the "previous" slot
+		/// @param this_frame The bitmap to be displayed in the "current" slot
+		/// @param next_frame The bitmap to be displayed in the "next" slot
 		FrameWidget(wxWindow *parent, int w_id, wxBitmap *prev_frame, wxBitmap *this_frame, wxBitmap *next_frame)
 			: wxPanel(parent, w_id)
 		{
@@ -170,6 +191,9 @@ class FrameWidget : public wxPanel {
 			Bind(wxEVT_BUTTON, FrameWidget::OnClickedThumbnail, this, ID_IMG_NEXT);
 		}
 
+		/// @brief Sets the frame number to display on this widget, with padding.
+		/// @param number The number to display
+		/// @param padding The number of digits to pad the number to
 		void SetFrameNum(int number, int padding=4) {
 			_frameNum = number;
 			std::string padded = std::to_string(number);
@@ -180,24 +204,31 @@ class FrameWidget : public wxPanel {
 			lbl_frameNum->SetLabel(padded);
 		}
 
+		/// @return The assigned frame number
 		int GetFrameNum() {
 			return _frameNum;
 		}
 
+		/// @param value The frame name to display, typically the full filename
 		void SetName(std::string value) {
 			lbl_filename->SetLabel(value);
 		}
 
+		/// @brief Sets the values for the stat display, formatted automatically.
 		void SetStatLabels(float mean_a, float mean_b) {
 			lbl_statA->SetLabel(std::format("Diff Prev: {:.4f}", mean_a));
 			lbl_statB->SetLabel(std::format("Diff Next: {:.4f}", mean_b));
 		}
 
+		/// @param flagged Whether or not this frame was flagged by the program
 		void SetFlagged(bool flagged) {
 			_isFlagged = flagged;
 			UpdateStatusBar();
 		}
 
+		/// @brief Adjust the size of the thumbnails being displayed.
+		///        Called by the parent UI when the slider is adjusted.
+		/// @param value A scale value from 0-100 inclusive
 		void SetThumbSize(int value) {
 			// Input value will be range 0-100
 			// Remap it and apply to our base _imageSize
@@ -213,14 +244,17 @@ class FrameWidget : public wxPanel {
 			// Update();
 		}
 
+		/// @return Whether or not the frame was flagged by the program
 		bool IsFlagged() {
 			return _isFlagged;
 		}
 
+		/// @return Whether the user marked this frame as an error
 		bool IsMarkedError() {
 			return _isMarkedError;
 		}
 
+		/// @return Whether the user marked this frame as OK
 		bool IsMarkedOK() {
 			return _isMarkedOK;
 		}
@@ -248,6 +282,7 @@ class FrameWidget : public wxPanel {
 		wxStaticText *lbl_last = new wxStaticText(this, -1, "<");
 		wxStaticText *lbl_next = new wxStaticText(this, -1, ">");
 
+		/// @brief Updates the color of the status bar based on the current flags
 		void UpdateStatusBar() {
 
 			if (_isMarkedError) {			
@@ -267,6 +302,7 @@ class FrameWidget : public wxPanel {
 			Update();
 		}
 
+		/// @brief Handler for the "Mark Error" button
 		void OnMarkedError(wxCommandEvent &event) {
 			_isMarkedError = !_isMarkedError;
 			_isMarkedOK = false;
@@ -274,6 +310,7 @@ class FrameWidget : public wxPanel {
 			event.Skip();
 		}
 		
+		/// @brief Handler for the "Mark OK" button
 		void OnMarkedOK(wxCommandEvent &event) {
 			_isMarkedOK = !_isMarkedOK;
 			_isMarkedError = false;
@@ -281,6 +318,7 @@ class FrameWidget : public wxPanel {
 			event.Skip();
 		}
 
+		/// @brief Handler for the clickable thumbnails, spawning a dialog based on which one was clicked.
 		void OnClickedThumbnail(wxCommandEvent &event) {
 			int id = event.GetId();
 			wxString title = lbl_filename->GetLabelText();
@@ -394,8 +432,11 @@ class FrameAnalysisPanel : public wxPanel {
 			delete frameGroup;
 		}
 
-		void SetFrameGroup(FrameGroup *value, int downsampling) {
-			frameGroup = value;
+		/// @brief Assign a FrameGroup to be displayed by this.  Triggers file loading and analysis.
+		/// @param frame_group Pointer to an initialized FrameGroup.  The frames within will be loaded and used to populate the UI. 
+		/// @param downsampling The factor to downsample by during analysis.  1 = full, 2 = half, 4 = quarter etc.
+		void SetFrameGroup(FrameGroup *frame_group, int downsampling) {
+			frameGroup = frame_group;
 			SetFrameCount(frameGroup->GetCount());
 			framePadding = std::to_string(frameCount).length();
 
@@ -455,10 +496,12 @@ class FrameAnalysisPanel : public wxPanel {
 		std::vector<ImageData*> *frameData = new std::vector<ImageData*>;
 		FrameGroup *frameGroup = nullptr;
 
+		/// @brief Updates the frame / flagged count label based on current conditions
 		void UpdateCountLabel() {
 			lbl_frameCount->SetLabel(std::format("{} Frames ({} Flagged)", frameCount, flaggedCount));
 		}
 
+		/// @brief Sets the frameCount and re-initializes several aspects of the UI and memory
 		void SetFrameCount(int count) {
 			frameCount = count;
 
@@ -475,6 +518,7 @@ class FrameAnalysisPanel : public wxPanel {
 			frameData->assign(count, nullptr);
 		}
 
+		/// @brief Constructs a new FrameWidget and adds it to the UI
 		FrameWidget* AddFrame(int index) {
 			wxBitmap *bmp_last, *bmp_next;
 			if (index > 0) {
@@ -490,13 +534,15 @@ class FrameAnalysisPanel : public wxPanel {
 			}
 
 			auto *newFrame = new FrameWidget(p_frameList, -1, bmp_last, frameData->at(index)->Bitmap(), bmp_next);
-			newFrame->SetFrameNum(index, framePadding);
+			int frame_num = frameGroup->GetFrameAt(index)->GetIndex();
+			newFrame->SetFrameNum(frame_num, framePadding);
 			frameWidgets->at(index) = newFrame;
 			vb_frameList->Add(newFrame, 0, wxEXPAND);
 
 			return newFrame;
 		}
 
+		/// @brief Recalculates frame flagging, typically after the threshold has been changed.
 		void UpdateFrameFlags() {
 			int flag_count = 0;
 
@@ -548,6 +594,8 @@ class FrameAnalysisPanel : public wxPanel {
 			HideUnflaggedFrames(hideUnflagged);
 		}
 
+		/// @brief Show or Hide unflagged frames in the main UI.
+		/// @param state Whether UNFLAGGED frames should be hidden or not.
 		void HideUnflaggedFrames(bool state) {
 			p_frameList->Freeze();
 
@@ -573,6 +621,8 @@ class FrameAnalysisPanel : public wxPanel {
 			Layout();
 		}
 
+		/// @brief Re-calculate the auto-threshold value for flagging frames.
+		///        This should only need to be done once, after loading a frame group.
 		void UpdateAutoThresh() {
 			// Update the threshold based on the standard deviation of diff values
 
@@ -636,22 +686,24 @@ class FrameAnalysisPanel : public wxPanel {
 
 		// Event handlers
 
-		// Wrapper for Binding to ui event
-		void UpdateFlaggedFrameLabel(wxCommandEvent &event) {
-			UpdateFlaggedFrameLabel();
-		}
-
+		/// @brief Handler for when the threshold spinner value changes.
+		///
+		///        Calls UpdateFrameFlags()
 		void OnThresholdChange(wxCommandEvent &event) {
 			threshold = std::stof(spn_thresh->GetTextValue().ToStdString()) / 100;
 			UpdateFrameFlags();
 		}
 
+		/// @brief Handler for the "Show Only Flagged Frames" button
 		void OnOnlyFlaggedChange(wxCommandEvent &event) {
 			hideUnflagged = chk_showOnlyFlagged->IsChecked();
 
 			HideUnflaggedFrames(hideUnflagged);
 		}
 
+		/// @brief Handler for the "Use Auto Threshold" button.
+		///
+		///        Sets the internal threshold value accordingly and updates flags.
 		void OnAutoThreshChange(bool update_flags=true) {
 			if (chk_autoThresh->GetValue()) {
 				threshold = auto_thresh;
@@ -665,11 +717,7 @@ class FrameAnalysisPanel : public wxPanel {
 
 		}
 
-		// Wrapper for Binding to ui event
-		void OnAutoThreshChange(wxCommandEvent &event) {
-			OnAutoThreshChange();
-		}
-
+		/// @brief Handler for the "Thumbnail Size" slider.
 		void OnThumbSizeChange(wxCommandEvent &event) {
 			int slider_val = sld_thumbnailSize->GetValue() * 20;
 
@@ -678,6 +726,16 @@ class FrameAnalysisPanel : public wxPanel {
 			}
 			p_frameList->FitInside();
 			p_frameList->Refresh();
+		}
+
+		// Wrapper for Binding to ui event
+		void OnAutoThreshChange(wxCommandEvent &event) {
+			OnAutoThreshChange();
+		}
+
+		// Wrapper for Binding to ui event
+		void UpdateFlaggedFrameLabel(wxCommandEvent &event) {
+			UpdateFlaggedFrameLabel();
 		}
 		
 };
