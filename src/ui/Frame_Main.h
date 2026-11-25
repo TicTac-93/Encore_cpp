@@ -43,6 +43,8 @@ class EncoreFrame : public wxFrame {
 		DirSelectPanel *p_dirSelect;
 		FrameAnalysisPanel *p_frameAnalysis;
 
+		bool first_load = true;
+
 		void OnQuit(wxCommandEvent &event) {
 			Close(true);
 		}
@@ -56,7 +58,18 @@ class EncoreFrame : public wxFrame {
 
 			p_frameAnalysis->SetFrameGroup((*framesToLoad)[0], downsampling);
 
-			SetSize(750, 500);
+			if (first_load) {
+				wxSize screen = wxGetDisplaySize();
+				if (screen.GetWidth() > 1280) {
+					SetSize(1200, 750);
+				} else {
+					SetSize(screen * .75);
+				}
+
+				Center();
+				first_load = false;
+			}
+			
 			nb_main->SetSelection(1);
 
 			delete framesToLoad;

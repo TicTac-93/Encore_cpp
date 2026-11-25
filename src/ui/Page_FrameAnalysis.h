@@ -362,7 +362,7 @@ class FrameAnalysisPanel : public wxPanel {
 				wxT("Only show Flagged frames"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
 			chk_showOnlyFlagged->SetValue(hideUnflagged);
 			lbl_thumbSlider = new wxStaticText(this, -1, "Thumbnail Size");
-			sld_thumbnailSize = new wxSlider(this, ID_SLD_THUMBSIZE, 0, 0, 5,
+			sld_thumbnailSize = new wxSlider(this, ID_SLD_THUMBSIZE, 2, 0, 5,
 				wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
 			lbl_thresh = new wxStaticText(this, -1, "Filter Threshold:");
 			spn_thresh = new wxSpinCtrlDouble(this, ID_SPN_THRESH, wxEmptyString,
@@ -395,7 +395,7 @@ class FrameAnalysisPanel : public wxPanel {
 			hb_top->Add(sld_thumbnailSize, 0);
 			hb_top->AddStretchSpacer();
 			hb_top->Add(lbl_thresh, 0, wxALIGN_CENTER);
-			hb_top->Add(spn_thresh, 0);
+			hb_top->Add(spn_thresh, 0, wxALIGN_CENTER);
 			hb_top->AddSpacer(PAD_SML);
 			hb_top->Add(chk_autoThresh, 0, wxALIGN_CENTER);
 
@@ -458,6 +458,9 @@ class FrameAnalysisPanel : public wxPanel {
 				newFrame->SetName(tgtFramePath->GetFilepath().filename().string());
 				newFrame->SetStatLabels(tgtFrameData->a_mean, tgtFrameData->b_mean);
 			}
+
+			// Update thumbnail sizes based on slider
+			UpdateThumbSize();
 
 			// Flag images using analysis data and current threshold
 			UpdateAutoThresh();
@@ -534,7 +537,7 @@ class FrameAnalysisPanel : public wxPanel {
 			}
 
 			auto *newFrame = new FrameWidget(p_frameList, -1, bmp_last, frameData->at(index)->Bitmap(), bmp_next);
-			int frame_num = frameGroup->GetFrameAt(index)->GetIndex();
+			int frame_num = frameGroup->GetFrameAt(index)->GetIndex(); // Gets the actual frame number, in case the sequence is not 0-indexed
 			newFrame->SetFrameNum(frame_num, framePadding);
 			frameWidgets->at(index) = newFrame;
 			vb_frameList->Add(newFrame, 0, wxEXPAND);
@@ -683,6 +686,16 @@ class FrameAnalysisPanel : public wxPanel {
 			UpdateCountLabel();
 		}
 
+		/// @brief Adjust the size of all FrameWidget thumbnails based on the slider
+		void UpdateThumbSize() {
+			int slider_val = sld_thumbnailSize->GetValue() * 20;
+
+			for (int i = 0; i < frameCount; i++) {
+				frameWidgets->at(i)->SetThumbSize(slider_val);
+			}
+			p_frameList->FitInside();
+			p_frameList->Refresh();
+		}
 
 		// Event handlers
 
@@ -719,13 +732,7 @@ class FrameAnalysisPanel : public wxPanel {
 
 		/// @brief Handler for the "Thumbnail Size" slider.
 		void OnThumbSizeChange(wxCommandEvent &event) {
-			int slider_val = sld_thumbnailSize->GetValue() * 20;
-
-			for (int i = 0; i < frameCount; i++) {
-				frameWidgets->at(i)->SetThumbSize(slider_val);
-			}
-			p_frameList->FitInside();
-			p_frameList->Refresh();
+			UpdateThumbSize();
 		}
 
 		// Wrapper for Binding to ui event
